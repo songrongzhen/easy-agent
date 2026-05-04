@@ -1,0 +1,5 @@
+io.github.songrongzhen.easyagent.autoconfigure.EasyAgentCoreAutoConfiguration
+io.github.songrongzhen.easyagent.autoconfigure.EasyAgentRagAutoConfiguration
+io.github.songrongzhen.easyagent.autoconfigure.EasyAgentMcpAutoConfiguration
+io.github.songrongzhen.easyagent.autoconfigure.EasyAgentSkillAutoConfiguration
+io.github.songrongzhen.easyagent.autoconfigure.EasyAgentLlmAutoConfiguration

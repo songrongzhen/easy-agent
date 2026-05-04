@@ -1,0 +1,5 @@
+/Users/songrongzhen/workspace/easy-agent/easy-agent-spring-boot-starter/src/main/java/io/github/songrongzhen/easyagent/autoconfigure/EasyAgentCoreAutoConfiguration.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-spring-boot-starter/src/main/java/io/github/songrongzhen/easyagent/autoconfigure/EasyAgentLlmAutoConfiguration.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-spring-boot-starter/src/main/java/io/github/songrongzhen/easyagent/autoconfigure/EasyAgentMcpAutoConfiguration.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-spring-boot-starter/src/main/java/io/github/songrongzhen/easyagent/autoconfigure/EasyAgentRagAutoConfiguration.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-spring-boot-starter/src/main/java/io/github/songrongzhen/easyagent/autoconfigure/EasyAgentSkillAutoConfiguration.java

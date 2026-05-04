@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.github.songrongzhen</groupId>
+        <artifactId>easy-agent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>easy-agent-spring-boot-starter</artifactId>
+    <name>Easy Agent Spring Boot Starter</name>
+    <description>Spring Boot Starter: Auto-configuration for all easy-agent modules</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.github.songrongzhen</groupId>
+            <artifactId>easy-agent-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.songrongzhen</groupId>
+            <artifactId>easy-agent-rag</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.github.songrongzhen</groupId>
+            <artifactId>easy-agent-mcp</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.github.songrongzhen</groupId>
+            <artifactId>easy-agent-skill</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.github.songrongzhen</groupId>
+            <artifactId>easy-agent-llm</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-core</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+</project>

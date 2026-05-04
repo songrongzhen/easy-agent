@@ -1,0 +1,8 @@
+/Users/songrongzhen/workspace/easy-agent/easy-agent-rag/src/main/java/io/github/songrongzhen/easyagent/rag/config/EasyAgentRagProperties.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-rag/src/main/java/io/github/songrongzhen/easyagent/rag/loader/PdfDocumentLoader.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-rag/src/main/java/io/github/songrongzhen/easyagent/rag/service/RagService.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-rag/src/main/java/io/github/songrongzhen/easyagent/rag/store/DocumentChunk.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-rag/src/main/java/io/github/songrongzhen/easyagent/rag/store/InMemoryVectorStoreProvider.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-rag/src/main/java/io/github/songrongzhen/easyagent/rag/store/PgVectorStoreProvider.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-rag/src/main/java/io/github/songrongzhen/easyagent/rag/store/VectorStoreProvider.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-rag/src/main/java/io/github/songrongzhen/easyagent/rag/store/VectorStoreProviderFactory.java

@@ -1,0 +1,7 @@
+/Users/songrongzhen/workspace/easy-agent/easy-agent-skill/src/main/java/io/github/songrongzhen/easyagent/skill/config/EasyAgentSkillProperties.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-skill/src/main/java/io/github/songrongzhen/easyagent/skill/model/SkillDefinition.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-skill/src/main/java/io/github/songrongzhen/easyagent/skill/model/SkillStep.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-skill/src/main/java/io/github/songrongzhen/easyagent/skill/parser/SkillMdParser.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-skill/src/main/java/io/github/songrongzhen/easyagent/skill/registry/SkillRegistry.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-skill/src/main/java/io/github/songrongzhen/easyagent/skill/service/SkillLoaderService.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-skill/src/main/java/io/github/songrongzhen/easyagent/skill/watcher/SkillFileWatcher.java

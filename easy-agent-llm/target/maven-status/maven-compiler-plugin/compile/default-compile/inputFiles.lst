@@ -1,0 +1,13 @@
+/Users/songrongzhen/workspace/easy-agent/easy-agent-llm/src/main/java/io/github/songrongzhen/easyagent/llm/client/OpenAiCompatibleApi.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-llm/src/main/java/io/github/songrongzhen/easyagent/llm/client/OpenAiCompatibleClient.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-llm/src/main/java/io/github/songrongzhen/easyagent/llm/config/EasyAgentLlmProperties.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-llm/src/main/java/io/github/songrongzhen/easyagent/llm/provider/LlmServiceFactory.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-llm/src/main/java/io/github/songrongzhen/easyagent/llm/provider/NoOpLlmService.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-llm/src/main/java/io/github/songrongzhen/easyagent/llm/provider/OpenAiCompatibleLlmService.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-llm/src/main/java/io/github/songrongzhen/easyagent/llm/service/ChatMessage.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-llm/src/main/java/io/github/songrongzhen/easyagent/llm/service/ChatResponse.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-llm/src/main/java/io/github/songrongzhen/easyagent/llm/service/LlmService.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-llm/src/main/java/io/github/songrongzhen/easyagent/llm/service/ToolCall.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-llm/src/main/java/io/github/songrongzhen/easyagent/llm/service/ToolDescriptor.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-llm/src/main/java/io/github/songrongzhen/easyagent/llm/service/ToolParameter.java
+/Users/songrongzhen/workspace/easy-agent/easy-agent-llm/src/main/java/io/github/songrongzhen/easyagent/llm/service/Usage.java
