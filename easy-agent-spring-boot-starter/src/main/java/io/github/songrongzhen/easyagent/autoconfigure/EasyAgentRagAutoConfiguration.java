@@ -1,12 +1,9 @@
 package io.github.songrongzhen.easyagent.autoconfigure;
 
-import io.github.songrongzhen.easyagent.core.executor.ToolExecutor;
-import io.github.songrongzhen.easyagent.core.registry.ToolRegistry;
 import io.github.songrongzhen.easyagent.rag.config.EasyAgentRagProperties;
 import io.github.songrongzhen.easyagent.rag.service.RagService;
 import io.github.songrongzhen.easyagent.rag.store.VectorStoreProvider;
 import io.github.songrongzhen.easyagent.rag.store.VectorStoreProviderFactory;
-import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -23,14 +20,9 @@ import org.springframework.context.event.ContextRefreshedEvent;
 public class EasyAgentRagAutoConfiguration {
 
     @Bean
-    @ConditionalOnMissingBean
-    public VectorStoreProvider vectorStoreProvider(EasyAgentRagProperties properties, org.springframework.context.ApplicationContext applicationContext) {
-        VectorStore springAiVectorStore = null;
-        try {
-            springAiVectorStore = applicationContext.getBean(VectorStore.class);
-        } catch (Exception ignored) {
-        }
-        return VectorStoreProviderFactory.create(properties, springAiVectorStore);
+    @ConditionalOnMissingBean(VectorStoreProvider.class)
+    public VectorStoreProvider vectorStoreProvider(EasyAgentRagProperties properties) {
+        return VectorStoreProviderFactory.create(properties);
     }
 
     @Bean

@@ -41,6 +41,7 @@
         <module>easy-agent-skill</module>
         <module>easy-agent-llm</module>
         <module>easy-agent-spring-boot-starter</module>
+        <module>easy-agent-demo</module>
     </modules>
 
     <properties>
@@ -105,6 +106,11 @@
             <dependency>
                 <groupId>io.github.songrongzhen</groupId>
                 <artifactId>easy-agent-llm</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.songrongzhen</groupId>
+                <artifactId>easy-agent-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

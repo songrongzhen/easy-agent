@@ -60,7 +60,8 @@ easy-agent
 ├── easy-agent-mcp                     # MCP 模块：MCP 协议实现、SSE 传输
 ├── easy-agent-skill                   # Skill 模块：SKILL.md 解析、热更新
 ├── easy-agent-llm                     # LLM 模块：多模型适配、OpenAI 兼容客户端
-└── easy-agent-spring-boot-starter     # Starter：自动装配、配置元数据
+├── easy-agent-spring-boot-starter     # Starter：自动装配、配置元数据
+└── easy-agent-demo                    # 演示模块：全功能演示与测试接口
 ```
 
 ---
@@ -586,3 +587,492 @@ mvn clean deploy -P release
 ## License
 
 [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0)
+
+---
+
+## Demo 演示模块
+
+`easy-agent-demo` 是一个完整的 Spring Boot 应用，包含了 easy-agent 所有功能的演示代码和 REST 测试接口，方便开发者快速验证各模块功能。
+
+### 启动 Demo
+
+```bash
+# MCP-Only 模式（无需 LLM API Key）
+cd easy-agent-demo
+mvn spring-boot:run
+
+# 使用 DashScope（通义千问）
+LLM_PROVIDER=dashscope DASHSCOPE_API_KEY=sk-xxx mvn spring-boot:run
+
+# 使用 DeepSeek
+LLM_PROVIDER=deepseek DEEPSEEK_API_KEY=sk-xxx mvn spring-boot:run
+
+# 使用 Ollama（本地部署）
+LLM_PROVIDER=ollama mvn spring-boot:run
+
+# 使用 OpenAI
+LLM_PROVIDER=openai OPENAI_API_KEY=sk-xxx mvn spring-boot:run
+```
+
+### Demo 项目结构
+
+```
+easy-agent-demo/
+├── pom.xml
+└── src/main/
+    ├── java/.../demo/
+    │   ├── EasyAgentDemoApplication.java     # Spring Boot 启动类
+    │   ├── controller/
+    │   │   └── DemoController.java           # REST 测试接口
+    │   └── tool/
+    │       ├── CoreDemoTools.java            # @EasyTool 核心功能演示
+    │       ├── RagDemoTools.java             # RAG 功能演示
+    │       └── LlmDemoTools.java             # LLM 多模型演示
+    └── resources/
+        ├── application.yml                   # 应用配置
+        ├── knowledge/                        # RAG 知识库目录
+        │   └── easy-agent-guide.txt          # 示例知识文档
+        └── skills/                           # SKILL.md 目录
+            ├── SKILL.md                      # 用户注册流程 Skill
+            └── diagnostic/SKILL.md           # 系统诊断流程 Skill
+```
+
+### 功能测试接口
+
+#### 1. 综合健康检查
+
+**测试功能**：验证所有模块是否正常加载
+
+```bash
+curl http://localhost:8080/demo/health
+```
+
+**预期返回**：
+
+```json
+{
+  "core": { "status": "UP", "registeredTools": 8 },
+  "skill": { "status": "UP", "loadedSkills": 2 },
+  "rag": { "status": "UP", "storageType": "InMemory" },
+  "llm": { "status": "UP", "provider": "none" },
+  "mcp": { "status": "UP", "endpoint": "/mcp/sse" }
+}
+```
+
+---
+
+#### 2. @EasyTool 核心功能测试
+
+##### 2.1 查看所有已注册工具
+
+**测试功能**：验证 `@EasyTool` 注解自动注册是否生效，`enabled=false` 的工具不应出现
+
+```bash
+curl http://localhost:8080/demo/tools
+```
+
+**预期返回**：
+
+```json
+{
+  "totalTools": 8,
+  "tools": [
+    { "name": "getCurrentTime", "description": "获取当前时间", "category": "", "enabled": true, "parameterCount": 0 },
+    { "name": "greet", "description": "向指定用户发送问候语", "category": "", "enabled": true, "parameterCount": 2 },
+    { "name": "calculate", "description": "执行简单的数学计算", "category": "math", "enabled": true, "parameterCount": 3 },
+    { "name": "getSystemInfo", "description": "获取系统运行信息", "category": "system", "enabled": true, "parameterCount": 0 },
+    { "name": "createUser", "description": "创建用户", "category": "user", "enabled": true, "parameterCount": 3 },
+    { "name": "searchKnowledge", "description": "从知识库中搜索相关信息", "category": "rag", "enabled": true, "parameterCount": 2 },
+    { "name": "reindexKnowledge", "description": "重新索引知识库中的PDF文档", "category": "rag", "enabled": true, "parameterCount": 0 },
+    { "name": "askLlm", "description": "向大语言模型提问并获取回答", "category": "llm", "enabled": true, "parameterCount": 1 }
+  ],
+  "disabledToolExcluded": true
+}
+```
+
+> **验证点**：`disabledTool` 不在列表中（`enabled=false`），`disabledToolExcluded` 为 `true`
+
+##### 2.2 调用无参数工具
+
+**测试功能**：验证 `ToolExecutor` 对无参数工具的反射调用
+
+```bash
+curl -X POST http://localhost:8080/demo/tools/getCurrentTime \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+**预期返回**：
+
+```json
+{
+  "toolName": "getCurrentTime",
+  "arguments": {},
+  "success": true,
+  "result": "\"2026-05-01 10:30:00\""
+}
+```
+
+##### 2.3 调用带参数工具
+
+**测试功能**：验证 `ToolExecutor` 的参数解析和类型转换（String、int、boolean）
+
+```bash
+# 问候工具（String + 可选参数）
+curl -X POST http://localhost:8080/demo/tools/greet \
+  -H "Content-Type: application/json" \
+  -d '{"name": "World", "greeting": "Hello"}'
+
+# 数学计算工具（double + String + double）
+curl -X POST http://localhost:8080/demo/tools/calculate \
+  -H "Content-Type: application/json" \
+  -d '{"a": 10, "operator": "add", "b": 20}'
+
+# 创建用户工具（String + int + boolean）
+curl -X POST http://localhost:8080/demo/tools/createUser \
+  -H "Content-Type: application/json" \
+  -d '{"username": "zhangsan", "age": 25, "active": true}'
+```
+
+**预期返回**：
+
+```json
+// greet
+{ "toolName": "greet", "success": true, "result": "\"Hello，World！\"" }
+
+// calculate
+{ "toolName": "calculate", "success": true, "result": "{\"expression\":\"10.0 add 20.0\",\"result\":30.0}" }
+
+// createUser
+{ "toolName": "createUser", "success": true, "result": "{\"id\":1777857600000,\"username\":\"zhangsan\",\"age\":25,\"active\":true}" }
+```
+
+##### 2.4 调用复杂返回值工具
+
+**测试功能**：验证工具返回复杂对象时的 JSON 序列化
+
+```bash
+curl -X POST http://localhost:8080/demo/tools/getSystemInfo \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+**预期返回**：
+
+```json
+{
+  "toolName": "getSystemInfo",
+  "success": true,
+  "result": "{\"javaVersion\":\"17\",\"osName\":\"Mac OS X\",\"availableProcessors\":8,\"maxMemory\":\"4096MB\",\"freeMemory\":\"512MB\"}"
+}
+```
+
+---
+
+#### 3. Skill 声明式体系测试
+
+##### 3.1 查看已加载的 Skill
+
+**测试功能**：验证 `SKILL.md` 文件的解析和注册是否生效
+
+```bash
+curl http://localhost:8080/demo/skills
+```
+
+**预期返回**：
+
+```json
+{
+  "totalSkills": 2,
+  "skills": [
+    {
+      "name": "用户注册流程",
+      "version": "1.0",
+      "description": "处理新用户注册的完整流程，包括信息验证、账户创建和通知发送",
+      "author": "easy-agent-demo",
+      "tags": ["用户", "注册", "流程"],
+      "requiredTools": ["createUser", "getCurrentTime"],
+      "stepCount": 3
+    },
+    {
+      "name": "系统诊断流程",
+      "version": "1.0",
+      "description": "自动诊断系统运行状态，收集关键指标并生成报告",
+      "author": "easy-agent-demo",
+      "tags": ["系统", "诊断", "监控"],
+      "requiredTools": ["getSystemInfo", "getCurrentTime"],
+      "stepCount": 3
+    }
+  ]
+}
+```
+
+> **验证点**：2 个 SKILL.md 文件被正确解析，元数据（name、version、tags、requiredTools）和步骤信息完整
+
+---
+
+#### 4. RAG 检索增强测试
+
+##### 4.1 语义检索知识库
+
+**测试功能**：验证知识库的语义搜索能力
+
+```bash
+curl "http://localhost:8080/demo/rag/search?query=EasyTool是什么&topK=3"
+```
+
+**预期返回**：
+
+```json
+{
+  "query": "EasyTool是什么",
+  "topK": 3,
+  "storageType": "InMemory",
+  "success": true,
+  "result": "EasyTool 注解 ... 开发者只需在任意 Spring Bean 的方法上添加 @EasyTool 注解 ...",
+  "resultLength": 256
+}
+```
+
+##### 4.2 重新索引知识库
+
+**测试功能**：验证手动触发 PDF 文档重新索引
+
+```bash
+curl -X POST http://localhost:8080/demo/rag/reindex
+```
+
+**预期返回**：
+
+```json
+{
+  "success": true,
+  "message": "知识库重新索引完成",
+  "storageType": "InMemory"
+}
+```
+
+---
+
+#### 5. MCP 协议测试
+
+##### 5.1 MCP SSE 连接测试
+
+**测试功能**：验证 MCP SSE 端点是否可连接
+
+```bash
+# 建立 SSE 连接
+curl -N http://localhost:8080/mcp/sse
+```
+
+**预期结果**：返回 SSE 事件流，包含 `endpoint` 事件
+
+##### 5.2 MCP 初始化握手
+
+**测试功能**：验证 MCP 协议的 initialize 方法
+
+```bash
+curl -X POST http://localhost:8080/mcp/messages \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "2024-11-05",
+      "capabilities": {},
+      "clientInfo": {"name": "test-client", "version": "1.0"}
+    }
+  }'
+```
+
+**预期返回**：
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": { "tools": { "listChanged": true } },
+    "serverInfo": { "name": "easy-agent-demo-mcp", "version": "0.1.0" }
+  }
+}
+```
+
+##### 5.3 MCP 列出工具
+
+**测试功能**：验证 MCP 协议的 tools/list 方法，@EasyTool 注册的工具应自动适配为 MCP Tool
+
+```bash
+curl -X POST http://localhost:8080/mcp/messages \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/list",
+    "params": {}
+  }'
+```
+
+**预期返回**：
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "tools": [
+      { "name": "getCurrentTime", "description": "获取当前时间", "inputSchema": { "type": "object", "properties": {}, "required": [] } },
+      { "name": "greet", "description": "向指定用户发送问候语", "inputSchema": { "type": "object", "properties": { "name": { "type": "string", "description": "用户名称" }, "greeting": { "type": "string", "description": "问候语，如你好、Hello" } }, "required": ["name"] } },
+      { "name": "calculate", "description": "执行简单的数学计算", ... }
+    ]
+  }
+}
+```
+
+##### 5.4 MCP 调用工具
+
+**测试功能**：验证 MCP 协议的 tools/call 方法
+
+```bash
+curl -X POST http://localhost:8080/mcp/messages \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "tools/call",
+    "params": {
+      "name": "greet",
+      "arguments": { "name": "MCP Client", "greeting": "Hi" }
+    }
+  }'
+```
+
+**预期返回**：
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "content": [{ "type": "text", "text": "\"Hi，MCP Client！\"" }]
+  }
+}
+```
+
+##### 5.5 Claude Code 集成配置
+
+将以下配置添加到 Claude Code 的 MCP 设置中：
+
+```json
+{
+  "mcpServers": {
+    "easy-agent": {
+      "url": "http://localhost:8080/mcp/sse"
+    }
+  }
+}
+```
+
+配置后，Claude Code 即可直接调用 demo 中注册的所有 `@EasyTool` 工具。
+
+---
+
+#### 6. LLM 多模型测试
+
+> 以下测试需要配置有效的 LLM API Key
+
+##### 6.1 基础对话
+
+**测试功能**：验证 LLM 服务的基本对话能力
+
+```bash
+curl -X POST http://localhost:8080/demo/llm/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "你好，请用一句话介绍你自己"}'
+```
+
+**预期返回**：
+
+```json
+{
+  "message": "你好，请用一句话介绍你自己",
+  "provider": "dashscope",
+  "success": true,
+  "reply": "你好！我是通义千问，阿里云推出的大语言模型，能够帮助你回答问题、创作内容和解决各种任务。",
+  "model": "qwen-max",
+  "usage": { "promptTokens": 15, "completionTokens": 32, "totalTokens": 47 }
+}
+```
+
+##### 6.2 Function Calling（工具调用）
+
+**测试功能**：验证 LLM 的 Function Calling 能力，模型应识别需要调用工具
+
+```bash
+curl -X POST http://localhost:8080/demo/llm/chat-with-tools \
+  -H "Content-Type: application/json" \
+  -d '{"message": "现在几点了？"}'
+```
+
+**预期返回**：
+
+```json
+{
+  "message": "现在几点了？",
+  "provider": "dashscope",
+  "success": true,
+  "model": "qwen-max",
+  "hasToolCalls": true,
+  "toolCalls": [
+    { "id": "call_xxx", "name": "getCurrentTime", "arguments": "{}" }
+  ]
+}
+```
+
+```bash
+curl -X POST http://localhost:8080/demo/llm/chat-with-tools \
+  -H "Content-Type: application/json" \
+  -d '{"message": "帮我算一下 15 乘以 28 等于多少"}'
+```
+
+**预期返回**：
+
+```json
+{
+  "message": "帮我算一下 15 乘以 28 等于多少",
+  "provider": "dashscope",
+  "success": true,
+  "hasToolCalls": true,
+  "toolCalls": [
+    { "id": "call_xxx", "name": "calculate", "arguments": "{\"a\":15,\"operator\":\"multiply\",\"b\":28}" }
+  ]
+}
+```
+
+---
+
+### 测试结果汇总
+
+| 功能模块 | 测试项 | 测试接口 | 状态 |
+|---------|--------|---------|------|
+| **Core** | @EasyTool 自动注册 | `GET /demo/tools` | ✅ 通过 |
+| **Core** | enabled=false 工具排除 | `GET /demo/tools` (disabledToolExcluded) | ✅ 通过 |
+| **Core** | 无参数工具调用 | `POST /demo/tools/getCurrentTime` | ✅ 通过 |
+| **Core** | 带参数工具调用（类型转换） | `POST /demo/tools/calculate` | ✅ 通过 |
+| **Core** | 复杂返回值序列化 | `POST /demo/tools/getSystemInfo` | ✅ 通过 |
+| **Core** | 多参数类型（String/int/boolean） | `POST /demo/tools/createUser` | ✅ 通过 |
+| **Skill** | SKILL.md 解析与注册 | `GET /demo/skills` | ✅ 通过 |
+| **Skill** | 多 Skill 文件加载 | `GET /demo/skills` (totalSkills=2) | ✅ 通过 |
+| **Skill** | 步骤信息完整性 | `GET /demo/skills` (stepCount) | ✅ 通过 |
+| **RAG** | 语义检索 | `GET /demo/rag/search` | ✅ 通过 |
+| **RAG** | 重新索引 | `POST /demo/rag/reindex` | ✅ 通过 |
+| **RAG** | 存储降级（无PGVector→InMemory） | `GET /demo/health` (storageType) | ✅ 通过 |
+| **MCP** | SSE 连接 | `GET /mcp/sse` | ✅ 通过 |
+| **MCP** | initialize 握手 | `POST /mcp/messages` | ✅ 通过 |
+| **MCP** | tools/list 工具列表 | `POST /mcp/messages` | ✅ 通过 |
+| **MCP** | tools/call 工具调用 | `POST /mcp/messages` | ✅ 通过 |
+| **LLM** | 基础对话 | `POST /demo/llm/chat` | ⏳ 需 API Key |
+| **LLM** | Function Calling | `POST /demo/llm/chat-with-tools` | ⏳ 需 API Key |
+| **综合** | 健康检查 | `GET /demo/health` | ✅ 通过 |
