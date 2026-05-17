@@ -15,7 +15,7 @@ import org.springframework.context.event.ContextRefreshedEvent;
 
 @AutoConfiguration
 @ConditionalOnClass(name = "io.github.songrongzhen.easyagent.rag.service.RagService")
-@ConditionalOnProperty(prefix = "easy-agent.rag", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "easy-agent.rag", name = "enabled", havingValue = "true", matchIfMissing = false)
 @EnableConfigurationProperties(EasyAgentRagProperties.class)
 public class EasyAgentRagAutoConfiguration {
 
@@ -48,7 +48,7 @@ public class EasyAgentRagAutoConfiguration {
         public void onApplicationEvent(ContextRefreshedEvent event) {
             if (!initialized) {
                 initialized = true;
-                ragService.indexPdfDocuments();
+                ragService.indexAllDocuments();
             }
         }
     }

@@ -1,0 +1,197 @@
+package io.github.songrongzhen.easyagent.rag.loader;
+
+import io.github.songrongzhen.easyagent.rag.store.DocumentChunk;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+
+public class ExcelDocumentLoader {
+
+    private static final Logger log = LoggerFactory.getLogger(ExcelDocumentLoader.class);
+
+    private final String resourcePath;
+
+    public ExcelDocumentLoader(String resourcePath) {
+        this.resourcePath = resourcePath;
+    }
+
+    public List<DocumentChunk> load() {
+        List<DocumentChunk> allChunks = new ArrayList<>();
+        try {
+            PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+            Resource[] xlsxResources = resolver.getResources(resourcePath + "**/*.xlsx");
+            Resource[] xlsResources = resolver.getResources(resourcePath + "**/*.xls");
+            
+            List<Resource> allResources = new ArrayList<>();
+            allResources.addAll(Arrays.asList(xlsxResources));
+            allResources.addAll(Arrays.asList(xlsResources));
+
+            if (allResources.isEmpty()) {
+                log.info("No Excel files found at path: {}", resourcePath);
+                return allChunks;
+            }
+
+            for (Resource resource : allResources) {
+                String filename = resource.getFilename();
+                log.info("Loading Excel document: {}", filename);
+                try {
+                    List<DocumentChunk> chunks = loadExcel(resource);
+                    allChunks.addAll(chunks);
+                    log.info("Loaded {} chunks from {}", chunks.size(), filename);
+                } catch (Exception e) {
+                    log.error("Failed to load Excel: {}", filename, e);
+                }
+            }
+        } catch (IOException e) {
+            log.error("Failed to resolve Excel resources from path: {}", resourcePath, e);
+        }
+        return allChunks;
+    }
+
+    private List<DocumentChunk> loadExcel(Resource resource) throws IOException {
+        List<DocumentChunk> chunks = new ArrayList<>();
+        String filename = resource.getFilename();
+        
+        try (InputStream is = resource.getInputStream();
+             Workbook workbook = createWorkbook(is, filename)) {
+            
+            for (int sheetIndex = 0; sheetIndex < workbook.getNumberOfSheets(); sheetIndex++) {
+                Sheet sheet = workbook.getSheetAt(sheetIndex);
+                String sheetName = sheet.getSheetName();
+                
+                List<DocumentChunk> sheetChunks = processSheet(sheet, filename, sheetName, sheetIndex);
+                chunks.addAll(sheetChunks);
+            }
+        }
+        return chunks;
+    }
+
+    private List<DocumentChunk> processSheet(Sheet sheet, String filename, String sheetName, int sheetIndex) {
+        List<DocumentChunk> chunks = new ArrayList<>();
+        
+        int firstRow = sheet.getFirstRowNum();
+        int lastRow = sheet.getLastRowNum();
+        
+        if (lastRow < 0) {
+            return chunks;
+        }
+
+        Row headerRow = sheet.getRow(firstRow);
+        List<String> headers = new ArrayList<>();
+        
+        if (headerRow != null) {
+            for (Cell cell : headerRow) {
+                String header = getCellValueAsString(cell);
+                headers.add(header != null ? header.trim() : "Column" + cell.getColumnIndex());
+            }
+        }
+
+        for (int rowIndex = firstRow + 1; rowIndex <= lastRow; rowIndex++) {
+            Row row = sheet.getRow(rowIndex);
+            if (row == null) continue;
+
+            try {
+                DocumentChunk chunk = createChunkFromRow(row, headers, filename, sheetName, rowIndex);
+                if (chunk != null) {
+                    chunks.add(chunk);
+                }
+            } catch (Exception e) {
+                log.warn("Failed to process row {} in sheet {} of Excel: {}", rowIndex, sheetName, filename, e);
+            }
+        }
+        
+        return chunks;
+    }
+
+    private DocumentChunk createChunkFromRow(Row row, List<String> headers, String filename, 
+                                             String sheetName, int rowIndex) {
+        StringBuilder content = new StringBuilder();
+        Map<String, Object> metadata = new HashMap<>();
+        
+        metadata.put("source", filename);
+        metadata.put("sheet", sheetName);
+        metadata.put("rowIndex", rowIndex);
+        
+        boolean hasContent = false;
+        
+        for (int i = 0; i < headers.size(); i++) {
+            Cell cell = row.getCell(i, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
+            String value = getCellValueAsString(cell);
+            
+            if (value != null && !value.trim().isEmpty()) {
+                hasContent = true;
+                String header = headers.get(i);
+                content.append(header).append("：").append(value.trim()).append("\n");
+                metadata.put("col_" + header, value.trim());
+            }
+        }
+        
+        if (!hasContent) {
+            return null;
+        }
+
+        return new DocumentChunk(
+                filename + "-" + sheetName + "-row-" + rowIndex,
+                content.toString().trim(),
+                filename,
+                metadata,
+                null
+        );
+    }
+
+    private Workbook createWorkbook(InputStream is, String filename) throws IOException {
+        if (filename.toLowerCase().endsWith(".xlsx")) {
+            return new XSSFWorkbook(is);
+        } else if (filename.toLowerCase().endsWith(".xls")) {
+            return new HSSFWorkbook(is);
+        } else {
+            throw new IllegalArgumentException("Unsupported Excel format: " + filename);
+        }
+    }
+
+    private String getCellValueAsString(Cell cell) {
+        if (cell == null) {
+            return null;
+        }
+        
+        return switch (cell.getCellType()) {
+            case STRING -> cell.getStringCellValue();
+            case NUMERIC -> {
+                if (DateUtil.isCellDateFormatted(cell)) {
+                    LocalDateTime dateTime = cell.getLocalDateTimeCellValue();
+                    yield dateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                } else {
+                    double value = cell.getNumericCellValue();
+                    if (value == (long) value) {
+                        yield String.valueOf((long) value);
+                    } else {
+                        yield String.valueOf(value);
+                    }
+                }
+            }
+            case BOOLEAN -> String.valueOf(cell.getBooleanCellValue());
+            case FORMULA -> {
+                try {
+                    yield cell.getStringCellValue();
+                } catch (Exception e) {
+                    try {
+                        yield String.valueOf(cell.getNumericCellValue());
+                    } catch (Exception e2) {
+                        yield null;
+                    }
+                }
+            }
+            default -> null;
+        };
+    }
+}

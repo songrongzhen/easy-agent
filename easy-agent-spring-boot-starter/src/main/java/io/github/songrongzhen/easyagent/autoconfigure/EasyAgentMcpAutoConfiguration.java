@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Bean;
 @AutoConfiguration
 @ConditionalOnClass(name = "io.github.songrongzhen.easyagent.mcp.server.EasyAgentMcpServer")
 @ConditionalOnWebApplication
-@ConditionalOnProperty(prefix = "easy-agent.mcp", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "easy-agent.mcp", name = "enabled", havingValue = "true", matchIfMissing = false)
 @EnableConfigurationProperties(EasyAgentMcpProperties.class)
 public class EasyAgentMcpAutoConfiguration {
 
@@ -24,13 +24,15 @@ public class EasyAgentMcpAutoConfiguration {
     public EasyAgentMcpServer easyAgentMcpServer(EasyAgentMcpProperties properties,
                                                   ToolRegistry toolRegistry,
                                                   ToolExecutor toolExecutor) {
-        return new EasyAgentMcpServer(properties, toolRegistry, toolExecutor);
+        EasyAgentMcpServer server = new EasyAgentMcpServer(properties, toolRegistry, toolExecutor);
+        server.start();
+        return server;
     }
 
     @Bean
-    @ConditionalOnMissingBean(name = "mcpSseController")
-    public io.github.songrongzhen.easyagent.mcp.controller.McpSseController mcpSseController(
+    @ConditionalOnMissingBean(name = "mcpController")
+    public io.github.songrongzhen.easyagent.mcp.controller.McpController mcpController(
             EasyAgentMcpServer mcpServer, EasyAgentMcpProperties properties) {
-        return new io.github.songrongzhen.easyagent.mcp.controller.McpSseController(mcpServer, properties);
+        return new io.github.songrongzhen.easyagent.mcp.controller.McpController(mcpServer, properties);
     }
 }

@@ -7,7 +7,7 @@
     <parent>
         <groupId>io.github.songrongzhen</groupId>
         <artifactId>easy-agent</artifactId>
-        <version>0.1.0</version>
+        <version>0.1.6</version>
     </parent>
 
     <artifactId>easy-agent-spring-boot-starter</artifactId>
@@ -22,22 +22,18 @@
         <dependency>
             <groupId>io.github.songrongzhen</groupId>
             <artifactId>easy-agent-rag</artifactId>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.github.songrongzhen</groupId>
             <artifactId>easy-agent-mcp</artifactId>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.github.songrongzhen</groupId>
             <artifactId>easy-agent-skill</artifactId>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.github.songrongzhen</groupId>
             <artifactId>easy-agent-llm</artifactId>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -46,7 +42,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -55,7 +50,6 @@
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-core</artifactId>
-            <optional>true</optional>
         </dependency>
     </dependencies>
 </project>

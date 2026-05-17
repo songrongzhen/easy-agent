@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Bean;
 
 @AutoConfiguration
 @ConditionalOnClass(name = "io.github.songrongzhen.easyagent.llm.service.LlmService")
-@ConditionalOnProperty(prefix = "easy-agent.llm", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "easy-agent.llm", name = "enabled", havingValue = "true", matchIfMissing = false)
 @EnableConfigurationProperties(EasyAgentLlmProperties.class)
 public class EasyAgentLlmAutoConfiguration {
 

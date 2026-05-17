@@ -1,6 +1,7 @@
 package io.github.songrongzhen.easyagent.rag.service;
 
 import io.github.songrongzhen.easyagent.rag.config.EasyAgentRagProperties;
+import io.github.songrongzhen.easyagent.rag.loader.ExcelDocumentLoader;
 import io.github.songrongzhen.easyagent.rag.loader.PdfDocumentLoader;
 import io.github.songrongzhen.easyagent.rag.store.DocumentChunk;
 import io.github.songrongzhen.easyagent.rag.store.VectorStoreProvider;
@@ -41,6 +42,31 @@ public class RagService {
 
         vectorStoreProvider.add(chunks);
         log.info("Indexed {} PDF chunks into vector store", chunks.size());
+    }
+
+    public void indexExcelDocuments() {
+        if (!properties.getExcel().isEnabled()) {
+            log.info("Excel indexing is disabled");
+            return;
+        }
+
+        ExcelDocumentLoader loader = new ExcelDocumentLoader(
+                properties.getExcel().getResourcePath()
+        );
+
+        List<DocumentChunk> chunks = loader.load();
+        if (chunks.isEmpty()) {
+            log.info("No Excel chunks to index");
+            return;
+        }
+
+        vectorStoreProvider.add(chunks);
+        log.info("Indexed {} Excel chunks into vector store", chunks.size());
+    }
+
+    public void indexAllDocuments() {
+        indexPdfDocuments();
+        indexExcelDocuments();
     }
 
     public List<DocumentChunk> search(String query, int topK) {

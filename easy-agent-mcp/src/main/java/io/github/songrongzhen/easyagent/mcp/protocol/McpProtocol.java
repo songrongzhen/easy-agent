@@ -11,6 +11,12 @@ public class McpProtocol {
     public static final String JSONRPC_VERSION = "2.0";
     public static final String LATEST_PROTOCOL_VERSION = "2024-11-05";
 
+    public static final int PARSE_ERROR = -32700;
+    public static final int INVALID_REQUEST = -32600;
+    public static final int METHOD_NOT_FOUND = -32601;
+    public static final int INVALID_PARAMS = -32602;
+    public static final int INTERNAL_ERROR = -32603;
+
     public record JsonRpcRequest(
             String jsonrpc,
             Object id,
@@ -22,6 +28,7 @@ public class McpProtocol {
         }
     }
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public record JsonRpcResponse(
             String jsonrpc,
             Object id,
@@ -58,6 +65,7 @@ public class McpProtocol {
             @JsonProperty("version") String version
     ) {}
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public record ServerCapabilities(
             @JsonProperty("tools") ToolCapabilities tools,
             @JsonProperty("resources") Object resources,

@@ -6,7 +6,7 @@
 
     <groupId>io.github.songrongzhen</groupId>
     <artifactId>easy-agent</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.6</version>
     <packaging>pom</packaging>
 
     <name>Easy Agent</name>
@@ -41,7 +41,6 @@
         <module>easy-agent-skill</module>
         <module>easy-agent-llm</module>
         <module>easy-agent-spring-boot-starter</module>
-        <module>easy-agent-demo</module>
     </modules>
 
     <properties>
@@ -57,6 +56,7 @@
         <lombok.version>1.18.42</lombok.version>
         <pdfbox.version>3.0.5</pdfbox.version>
         <commons-io.version>2.19.0</commons-io.version>
+        <poi.version>5.3.0</poi.version>
 
         <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
         <maven-source-plugin.version>3.3.1</maven-source-plugin.version>
@@ -134,6 +134,16 @@
                 <groupId>commons-io</groupId>
                 <artifactId>commons-io</artifactId>
                 <version>${commons-io.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.poi</groupId>
+                <artifactId>poi</artifactId>
+                <version>${poi.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.poi</groupId>
+                <artifactId>poi-ooxml</artifactId>
+                <version>${poi.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

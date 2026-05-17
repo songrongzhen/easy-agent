@@ -1,5 +1,6 @@
 package io.github.songrongzhen.easyagent.llm.client;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -72,6 +73,7 @@ public class OpenAiCompatibleApi {
             @JsonProperty("arguments") String arguments
     ) {}
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record ChatCompletionResponse(
             @JsonProperty("id") String id,
             @JsonProperty("model") String model,
@@ -79,12 +81,14 @@ public class OpenAiCompatibleApi {
             @JsonProperty("usage") Usage usage
     ) {}
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record Choice(
             @JsonProperty("index") int index,
             @JsonProperty("message") ChatMessage message,
             @JsonProperty("finish_reason") String finishReason
     ) {}
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record Usage(
             @JsonProperty("prompt_tokens") long promptTokens,
             @JsonProperty("completion_tokens") long completionTokens,

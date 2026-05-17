@@ -34,6 +34,13 @@ public class McpToolAdapter {
     }
 
     public McpProtocol.CallToolResult executeMcpTool(String toolName, Map<String, Object> arguments) {
+        if (toolName == null || toolName.isEmpty()) {
+            return new McpProtocol.CallToolResult(
+                    List.of(McpProtocol.Content.text("Error: tool name is required")),
+                    true
+            );
+        }
+        
         try {
             String argsJson = OBJECT_MAPPER.writeValueAsString(arguments != null ? arguments : Map.of());
             ToolInvocation invocation = new ToolInvocation(toolName, argsJson);

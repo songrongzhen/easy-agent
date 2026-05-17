@@ -154,7 +154,7 @@ public class OpenAiCompatibleClient {
         }
 
         return new io.github.songrongzhen.easyagent.llm.service.ChatResponse(
-                message.content(), response.model(), List.of(), usage
+                message.content(), "assistant", response.model(), List.of(), usage
         );
     }
 

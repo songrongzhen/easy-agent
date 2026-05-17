@@ -35,12 +35,15 @@ public class EasyAgentMcpServer {
                 case "resources/list" -> handleResourcesList();
                 case "prompts/list" -> handlePromptsList();
                 case "ping" -> Map.of();
-                default -> throw new UnsupportedOperationException("Unknown method: " + request.method());
+                default -> throw new UnsupportedOperationException("Method not found: " + request.method());
             };
             return McpProtocol.JsonRpcResponse.success(request.id(), result);
+        } catch (UnsupportedOperationException e) {
+            log.error("Method not found: {}", request.method(), e);
+            return McpProtocol.JsonRpcResponse.error(request.id(), McpProtocol.METHOD_NOT_FOUND, e.getMessage());
         } catch (Exception e) {
             log.error("Failed to handle MCP request: {}", request.method(), e);
-            return McpProtocol.JsonRpcResponse.error(request.id(), -32603, e.getMessage());
+            return McpProtocol.JsonRpcResponse.error(request.id(), McpProtocol.INTERNAL_ERROR, e.getMessage());
         }
     }
 
@@ -70,7 +73,15 @@ public class EasyAgentMcpServer {
                     true
             );
         }
+        
         String toolName = (String) params.get("name");
+        if (toolName == null || toolName.isEmpty()) {
+            return new McpProtocol.CallToolResult(
+                    List.of(McpProtocol.Content.text("Error: tool name is required")),
+                    true
+            );
+        }
+        
         @SuppressWarnings("unchecked")
         Map<String, Object> arguments = (Map<String, Object>) params.get("arguments");
         log.info("MCP tool call: {}", toolName);

@@ -15,7 +15,7 @@ import org.springframework.context.event.ContextRefreshedEvent;
 
 @AutoConfiguration
 @ConditionalOnClass(name = "io.github.songrongzhen.easyagent.skill.service.SkillLoaderService")
-@ConditionalOnProperty(prefix = "easy-agent.skill", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "easy-agent.skill", name = "enabled", havingValue = "true", matchIfMissing = false)
 @EnableConfigurationProperties(EasyAgentSkillProperties.class)
 public class EasyAgentSkillAutoConfiguration {
 

@@ -13,6 +13,8 @@ public class EasyAgentRagProperties {
 
     private Pdf pdf = new Pdf();
 
+    private Excel excel = new Excel();
+
     private Embedding embedding = new Embedding();
 
     public enum StorageType {
@@ -49,6 +51,16 @@ public class EasyAgentRagProperties {
         public void setChunkOverlap(int chunkOverlap) { this.chunkOverlap = chunkOverlap; }
     }
 
+    public static class Excel {
+        private boolean enabled = true;
+        private String resourcePath = "classpath:knowledge/";
+        
+        public boolean isEnabled() { return enabled; }
+        public void setEnabled(boolean enabled) { this.enabled = enabled; }
+        public String getResourcePath() { return resourcePath; }
+        public void setResourcePath(String resourcePath) { this.resourcePath = resourcePath; }
+    }
+
     public static class Embedding {
         private String model = "text-embedding-v3";
         private int dimensions = 1536;
@@ -66,6 +78,8 @@ public class EasyAgentRagProperties {
     public void setPgVector(PgVector pgVector) { this.pgVector = pgVector; }
     public Pdf getPdf() { return pdf; }
     public void setPdf(Pdf pdf) { this.pdf = pdf; }
+    public Excel getExcel() { return excel; }
+    public void setExcel(Excel excel) { this.excel = excel; }
     public Embedding getEmbedding() { return embedding; }
     public void setEmbedding(Embedding embedding) { this.embedding = embedding; }
 }

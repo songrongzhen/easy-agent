@@ -7,7 +7,11 @@ public class EasyAgentLlmProperties {
 
     private boolean enabled = true;
 
-    private LlmProvider provider = LlmProvider.NONE;
+    private LlmProvider provider = LlmProvider.AUTO;
+
+    private String model;
+
+    private String apiKey;
 
     private DashScope dashScope = new DashScope();
 
@@ -20,6 +24,7 @@ public class EasyAgentLlmProperties {
     private ChatOptions chatOptions = new ChatOptions();
 
     public enum LlmProvider {
+        AUTO,
         NONE,
         DASHSCOPE,
         DEEPSEEK,
@@ -30,7 +35,7 @@ public class EasyAgentLlmProperties {
     public static class DashScope {
         private String apiKey;
         private String model = "qwen-max";
-        private String baseUrl = "https://dashscope.aliyuncs.com/compatible-mode/v1";
+        private String baseUrl = "https://dashscope.aliyuncs.com/compatible-mode";
         public String getApiKey() { return apiKey; }
         public void setApiKey(String apiKey) { this.apiKey = apiKey; }
         public String getModel() { return model; }
@@ -88,6 +93,10 @@ public class EasyAgentLlmProperties {
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
     public LlmProvider getProvider() { return provider; }
     public void setProvider(LlmProvider provider) { this.provider = provider; }
+    public String getModel() { return model; }
+    public void setModel(String model) { this.model = model; }
+    public String getApiKey() { return apiKey; }
+    public void setApiKey(String apiKey) { this.apiKey = apiKey; }
     public DashScope getDashScope() { return dashScope; }
     public void setDashScope(DashScope dashScope) { this.dashScope = dashScope; }
     public DeepSeek getDeepSeek() { return deepSeek; }
@@ -98,4 +107,28 @@ public class EasyAgentLlmProperties {
     public void setOpenAi(OpenAi openAi) { this.openAi = openAi; }
     public ChatOptions getChatOptions() { return chatOptions; }
     public void setChatOptions(ChatOptions chatOptions) { this.chatOptions = chatOptions; }
+    
+    public LlmProvider inferProvider() {
+        if (provider != LlmProvider.AUTO) {
+            return provider;
+        }
+        
+        if (model == null || model.isEmpty()) {
+            return LlmProvider.NONE;
+        }
+        
+        String modelLower = model.toLowerCase();
+        
+        if (modelLower.contains("qwen") || modelLower.contains("tongyi")) {
+            return LlmProvider.DASHSCOPE;
+        } else if (modelLower.contains("deepseek")) {
+            return LlmProvider.DEEPSEEK;
+        } else if (modelLower.contains("llama") || modelLower.contains("mistral") || modelLower.contains("codellama")) {
+            return LlmProvider.OLLAMA;
+        } else if (modelLower.contains("gpt") || modelLower.contains("o1") || modelLower.contains("o3")) {
+            return LlmProvider.OPENAI;
+        }
+        
+        return LlmProvider.DASHSCOPE;
+    }
 }
