@@ -27,10 +27,16 @@ public class ExcelDocumentLoader {
 
     public List<DocumentChunk> load() {
         List<DocumentChunk> allChunks = new ArrayList<>();
+        log.info("Excel loader: Starting to load from path: {}", resourcePath);
         try {
             PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
-            Resource[] xlsxResources = resolver.getResources(resourcePath + "**/*.xlsx");
-            Resource[] xlsResources = resolver.getResources(resourcePath + "**/*.xls");
+            String xlsxPattern = resourcePath + "**/*.xlsx";
+            String xlsPattern = resourcePath + "**/*.xls";
+            log.info("Excel loader: Search patterns - xlsx: {}, xls: {}", xlsxPattern, xlsPattern);
+            
+            Resource[] xlsxResources = resolver.getResources(xlsxPattern);
+            Resource[] xlsResources = resolver.getResources(xlsPattern);
+            log.info("Excel loader: Found {} xlsx files, {} xls files", xlsxResources.length, xlsResources.length);
             
             List<Resource> allResources = new ArrayList<>();
             allResources.addAll(Arrays.asList(xlsxResources));
@@ -55,6 +61,7 @@ public class ExcelDocumentLoader {
         } catch (IOException e) {
             log.error("Failed to resolve Excel resources from path: {}", resourcePath, e);
         }
+        log.info("Excel loader: Total loaded {} chunks", allChunks.size());
         return allChunks;
     }
 

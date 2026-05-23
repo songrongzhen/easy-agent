@@ -8,6 +8,7 @@ import io.github.songrongzhen.easyagent.rag.store.VectorStoreProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import jakarta.annotation.PostConstruct;
 import java.util.List;
 
 public class RagService {
@@ -22,9 +23,25 @@ public class RagService {
         this.properties = properties;
     }
 
+    @PostConstruct
+    public void init() {
+        if (!properties.isEnabled()) {
+            return;
+        }
+        
+        try {
+            indexAllDocuments();
+            int count = vectorStoreProvider.count();
+            if (count > 0) {
+                log.info("RAG initialized with {} document chunks", count);
+            }
+        } catch (Exception e) {
+            log.error("Failed to initialize RAG documents: {}", e.getMessage(), e);
+        }
+    }
+
     public void indexPdfDocuments() {
         if (!properties.getPdf().isEnabled()) {
-            log.info("PDF indexing is disabled");
             return;
         }
 
@@ -35,18 +52,14 @@ public class RagService {
         );
 
         List<DocumentChunk> chunks = loader.load();
-        if (chunks.isEmpty()) {
-            log.info("No PDF chunks to index");
-            return;
+        if (!chunks.isEmpty()) {
+            vectorStoreProvider.add(chunks);
+            log.info("Loaded {} PDF chunks from {}", chunks.size(), properties.getPdf().getResourcePath());
         }
-
-        vectorStoreProvider.add(chunks);
-        log.info("Indexed {} PDF chunks into vector store", chunks.size());
     }
 
     public void indexExcelDocuments() {
         if (!properties.getExcel().isEnabled()) {
-            log.info("Excel indexing is disabled");
             return;
         }
 
@@ -55,13 +68,10 @@ public class RagService {
         );
 
         List<DocumentChunk> chunks = loader.load();
-        if (chunks.isEmpty()) {
-            log.info("No Excel chunks to index");
-            return;
+        if (!chunks.isEmpty()) {
+            vectorStoreProvider.add(chunks);
+            log.info("Loaded {} Excel chunks from {}", chunks.size(), properties.getExcel().getResourcePath());
         }
-
-        vectorStoreProvider.add(chunks);
-        log.info("Indexed {} Excel chunks into vector store", chunks.size());
     }
 
     public void indexAllDocuments() {
@@ -90,6 +100,18 @@ public class RagService {
             sb.append("\n\n");
         }
         return sb.toString().trim();
+    }
+
+    public String searchAndConcat(String query) {
+        return searchAndConcat(query, 5);
+    }
+
+    public boolean hasKnowledgeBase() {
+        try {
+            return vectorStoreProvider.count() > 0;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public VectorStoreProvider getVectorStoreProvider() {

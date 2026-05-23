@@ -30,9 +30,13 @@ public class PdfDocumentLoader {
 
     public List<DocumentChunk> load() {
         List<DocumentChunk> allChunks = new ArrayList<>();
+        log.info("PDF loader: Starting to load from path: {}", resourcePath);
         try {
             PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
-            Resource[] resources = resolver.getResources(resourcePath + "**/*.pdf");
+            String searchPattern = resourcePath + "**/*.pdf";
+            log.info("PDF loader: Search pattern: {}", searchPattern);
+            Resource[] resources = resolver.getResources(searchPattern);
+            log.info("PDF loader: Found {} PDF files", resources.length);
 
             if (resources.length == 0) {
                 log.info("No PDF files found at path: {}", resourcePath);
@@ -54,6 +58,7 @@ public class PdfDocumentLoader {
         } catch (IOException e) {
             log.error("Failed to resolve PDF resources from path: {}", resourcePath, e);
         }
+        log.info("PDF loader: Total loaded {} chunks", allChunks.size());
         return allChunks;
     }
 
