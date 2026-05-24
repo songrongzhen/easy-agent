@@ -21,20 +21,17 @@ public class VectorStoreProviderFactory {
         
         return switch (storageType) {
             case PGVECTOR -> {
-                log.warn("PGVECTOR storage requires EmbeddingModel, falling back to IN_MEMORY");
                 yield createInMemory(properties);
             }
             case IN_MEMORY -> createInMemory(properties);
             default -> {
-                log.warn("Unknown storage type: {}, falling back to IN_MEMORY", storageType);
                 yield createInMemory(properties);
             }
         };
     }
 
     private static VectorStoreProvider createAuto(EasyAgentRagProperties properties) {
-        // 总是使用内存存储，因为PgVector需要JdbcTemplate和EmbeddingModel
-        log.info("Auto-selected IN_MEMORY storage with strategy: {}", properties.getSearch().getStrategy());
+        // 使用内存存储
         return createInMemory(properties);
     }
 

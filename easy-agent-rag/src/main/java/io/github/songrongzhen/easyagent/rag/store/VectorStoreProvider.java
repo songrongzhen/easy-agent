@@ -55,4 +55,11 @@ public interface VectorStoreProvider {
      * @return 文档数量
      */
     int count();
+
+    /**
+     * 获取所有文档
+     *
+     * @return 所有文档列表
+     */
+    List<DocumentChunk> getAll();
 }

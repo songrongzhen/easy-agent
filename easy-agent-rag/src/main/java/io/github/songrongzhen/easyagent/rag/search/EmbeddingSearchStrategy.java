@@ -10,8 +10,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 基于Embedding模型的语义搜索策略
- * 
  * 使用大模型的Embedding服务将文本转为向量，计算余弦相似度
  */
 public class EmbeddingSearchStrategy implements SearchStrategy {

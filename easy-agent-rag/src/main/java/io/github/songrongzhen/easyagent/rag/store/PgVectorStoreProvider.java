@@ -5,10 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * PgVector存储提供者
- * 
- * 注意：此实现需要JdbcTemplate和EmbeddingModel
- * 如果这些不可用，将返回null
+ * PgVector存储
  */
 public class PgVectorStoreProvider implements VectorStoreProvider {
 
@@ -55,5 +52,10 @@ public class PgVectorStoreProvider implements VectorStoreProvider {
     @Override
     public int count() {
         return 0;
+    }
+
+    @Override
+    public java.util.List<DocumentChunk> getAll() {
+        return java.util.List.of();
     }
 }

@@ -11,7 +11,6 @@ import java.util.List;
 
 /**
  * 搜索策略工厂
- * 
  * 根据配置自动选择合适的搜索策略
  */
 public class SearchStrategyFactory {
@@ -42,19 +41,18 @@ public class SearchStrategyFactory {
      * 自动选择策略
      */
     private static SearchStrategy createAutoStrategy(EasyAgentRagProperties properties, EmbeddingModel embeddingModel) {
-        // 优先级1: Embedding策略
         if (isEmbeddingAvailable(properties, embeddingModel)) {
             log.info("Auto-selecting EMBEDDING search strategy (most accurate)");
             return createStrategy(SearchStrategyType.EMBEDDING, properties, embeddingModel);
         }
         
-        // 优先级2: 余弦相似度策略
+        // 余弦相似度策略
         if (properties.getSearch().getCosine().isEnabled()) {
             log.info("Auto-selecting COSINE search strategy (fallback)");
             return createStrategy(SearchStrategyType.COSINE, properties, embeddingModel);
         }
         
-        // 优先级3: TF-IDF策略（兜底）
+        // TF-IDF策略（兜底）
         log.info("Auto-selecting TF-IDF search strategy (last fallback)");
         return createStrategy(SearchStrategyType.TF_IDF, properties, embeddingModel);
     }
@@ -94,16 +92,7 @@ public class SearchStrategyFactory {
             log.debug("Embedding model is null");
             return false;
         }
-        
-        // 测试服务可用性
-        try {
-            embeddingModel.embed("test");
-            log.debug("Embedding service is available");
-            return true;
-        } catch (Exception e) {
-            log.debug("Embedding service test failed: {}", e.getMessage());
-            return false;
-        }
+        return true;
     }
 
     /**
@@ -145,7 +134,6 @@ public class SearchStrategyFactory {
             
             for (SearchStrategy strategy : strategies) {
                 try {
-                    log.debug("Trying search strategy: {}", strategy.getName());
                     var results = strategy.search(query, documents, topK);
                     if (!results.isEmpty()) {
                         log.info("Search succeeded with strategy: {}", strategy.getName());
@@ -155,8 +143,6 @@ public class SearchStrategyFactory {
                     log.warn("Strategy {} failed, trying next: {}", strategy.getName(), e.getMessage());
                 }
             }
-            
-            log.warn("All search strategies failed, returning empty result");
             return List.of();
         }
     }

@@ -69,4 +69,9 @@ public class InMemoryVectorStoreProvider implements VectorStoreProvider {
     public int count() {
         return store.size();
     }
+
+    @Override
+    public List<DocumentChunk> getAll() {
+        return new ArrayList<>(store.values());
+    }
 }

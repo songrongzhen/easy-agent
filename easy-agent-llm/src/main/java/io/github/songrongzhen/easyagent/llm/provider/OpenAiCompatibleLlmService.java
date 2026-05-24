@@ -4,6 +4,7 @@ import io.github.songrongzhen.easyagent.llm.client.OpenAiCompatibleClient;
 import io.github.songrongzhen.easyagent.llm.service.*;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 public class OpenAiCompatibleLlmService implements LlmService {
 
@@ -31,5 +32,10 @@ public class OpenAiCompatibleLlmService implements LlmService {
     @Override
     public String getProviderName() {
         return client.getProviderName();
+    }
+
+    @Override
+    public void chatStream(List<ChatMessage> messages, Consumer<String> consumer) {
+        client.chatStream(messages, consumer);
     }
 }

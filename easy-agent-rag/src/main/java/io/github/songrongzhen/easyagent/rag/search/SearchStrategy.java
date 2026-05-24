@@ -6,11 +6,6 @@ import java.util.List;
 
 /**
  * 搜索策略接口
- *
- * @param query     用户查询文本
- * @param documents 待搜索的文档列表
- * @param topK      返回的最相关文档数量
- * @return 按相关度排序的文档列表
  */
 @FunctionalInterface
 public interface SearchStrategy {

@@ -117,4 +117,12 @@ public class RagService {
     public VectorStoreProvider getVectorStoreProvider() {
         return vectorStoreProvider;
     }
+
+    public List<DocumentChunk> getAllDocuments() {
+        try {
+            return vectorStoreProvider.getAll();
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
 }

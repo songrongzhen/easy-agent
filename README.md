@@ -157,7 +157,7 @@ public class OrderService {
 
 ### 3. RAG 检索增强生成
 
-无缝集成 RAG 能力，支持 PGVector 向量存储和 PDF 知识库，在 AI 对话中进行语义检索。
+无缝集成 RAG 能力，支持 PGVector 向量存储和 Excel、PDF知识库，在 AI 对话中进行语义检索。
 
 **存储策略：**
 
@@ -170,7 +170,7 @@ public class OrderService {
 
 **PDF 知识库：**
 
-- 自动扫描 `classpath:knowledge/` 下的 PDF 文件
+- 自动扫描 `classpath:knowledge/` 下的 PDF 文件、Excel 文件
 - 智能分块（可配置 chunk 大小和重叠）
 - 启动时自动索引，无需手动操作
 
@@ -211,8 +211,9 @@ public class KnowledgeService {
 
 **传输方式：**
 
-- **SSE（Server-Sent Events）**：基于 HTTP 的 SSE 长连接 + POST 消息端点
-- **STDIO**：标准输入输出（预留）
+- **HTTP POST**：基于 JSON-RPC 2.0 的 POST 请求，支持双向通信
+- **HTTP GET**：支持 URL 参数方式调用（用于调试）
+
 
 **MCP 客户端配置示例（Claude Code）：**
 
@@ -220,10 +221,16 @@ public class KnowledgeService {
 {
   "mcpServers": {
     "easy-agent": {
-      "url": "http://localhost:8080/mcp/sse"
+      "url": "http://localhost:8080/mcp"
     }
   }
 }
+```
+
+**连接命令（Claude Code）：**
+
+```bash
+add claude mcp http://localhost:8080/mcp
 ```
 
 ---
@@ -232,7 +239,24 @@ public class KnowledgeService {
 
 基于 OpenAI 兼容 API 的统一 HTTP 客户端，一套代码适配多家大模型供应商，支持 Function Calling（Tool Use）。
 
-**配置示例：**
+**简化配置（推荐）：**
+
+```yaml
+easy-agent:
+  llm:
+    enabled: true
+    model: qwen-plus              # 通过模型名自动识别 provider
+    api-key: sk-xxxxxxxx          # 通用 API Key
+    base-url: http://localhost:11434  # 可选，用于本地部署如 Ollama
+```
+
+> **注意**：`provider` 可省略，系统会根据 `model` 名称自动推断：
+> - 包含 `qwen` → dashscope（通义千问）
+> - 包含 `deepseek` → deepseek
+> - 包含 `ollama` 或本地 URL → ollama
+> - 其他 → openai
+
+**完整配置示例：**
 
 ```yaml
 # 通义千问
@@ -268,41 +292,6 @@ easy-agent:
       model: gpt-4o
 ```
 
-**编程式调用：**
-
-```java
-@Service
-public class ChatService {
-
-    @Autowired
-    private LlmService llmService;
-
-    public String chat(String userMessage) {
-        ChatResponse response = llmService.chat(List.of(
-            ChatMessage.system("你是一个有帮助的助手"),
-            ChatMessage.user(userMessage)
-        ));
-        return response.content();
-    }
-
-    public String chatWithTools(String userMessage) {
-        List<ToolDescriptor> tools = List.of(
-            new ToolDescriptor("queryWeather", "查询天气",
-                List.of(new ToolParameter("city", "string", "城市名", true)))
-        );
-        ChatResponse response = llmService.chatWithTools(
-            List.of(ChatMessage.user(userMessage)), tools
-        );
-        if (response.hasToolCalls()) {
-            // 处理工具调用...
-        }
-        return response.content();
-    }
-}
-```
-
----
-
 ## 快速开始
 
 ### 1. 引入依赖
@@ -319,28 +308,46 @@ public class ChatService {
 
 ```yaml
 easy-agent:
-  # LLM 配置（必选，至少配一个 Provider 或仅启用 MCP）
-  llm:
-    provider: dashscope
-    dash-scope:
-      api-key: ${DASHSCOPE_API_KEY}
-      model: qwen-max
-    chat-options:
-      temperature: 0.7
-      max-tokens: 4096
+  # MCP 配置（可选）
+  mcp:
+  enabled: true
+  llm :
+    enabled: true
+    model: "qwen-plus"
+    api-key: {your api key}
 
   # RAG 配置（可选）
   rag:
-    storage-type: auto
-    pdf:
-      resource-path: classpath:knowledge/
-      chunk-size: 1000
-      chunk-overlap: 200
-
-  # MCP 配置（可选）
-  mcp:
+    # 是否启用 RAG 功能
     enabled: true
-    sse-endpoint: /mcp/sse
+    # 向量存储类型：AUTO（自动选择）、PGVECTOR（PostgreSQL向量库）、IN_MEMORY（内存模式）
+    storage-type: IN_MEMORY
+    search:
+      # 搜索策略：AUTO（自动选择）、EMBEDDING（向量检索）、COSINE（余弦相似度）、TF_IDF
+      strategy: AUTO
+      embedding:
+        # 是否启用 Embedding 向量检索（最精准，但需要配置 Embedding 服务）
+        enabled: true
+        # Embedding 服务提供者：AUTO、OLLAMA、OPENAI、DASHSCOPE
+        provider: DASHSCOPE
+        # Embedding 模型名称
+        model: nomic-embed-text
+      cosine:
+        # 是否启用余弦相似度搜索（作为 Embedding 的降级方案）
+        enabled: true
+      tfidf:
+        # 是否启用 TF-IDF 搜索（兜底方案，不需要外部服务）
+        enabled: true
+    pdf:
+      # 是否启用 PDF 文档加载
+      enabled: true
+      # PDF 文件所在目录（支持 classpath: 前缀）
+      resource-path: classpath:knowledge/
+    excel:
+      # 是否启用 Excel 文档加载
+      enabled: true
+      # Excel 文件所在目录（支持 classpath: 前缀）
+      resource-path: classpath:knowledge/
 
   # Skill 配置（可选）
   skill:
@@ -371,7 +378,7 @@ public class MyTools {
 
 ### 4. 放置知识库（可选）
 
-将 PDF 文件放到 `src/main/resources/knowledge/` 目录下，启动时自动索引。
+将 Excel、PDF 文件放到 `src/main/resources/knowledge/` 目录下，启动时自动索引。
 
 ### 5. 定义 Skill（可选）
 
@@ -515,7 +522,7 @@ easy-agent/
 │       ├── server/
 │       │   └── EasyAgentMcpServer.java        # MCP 服务端核心逻辑
 │       └── controller/
-│           └── McpSseController.java          # SSE 传输层 HTTP 端点
+│           └── McpController.java              # HTTP 传输层端点
 ├── easy-agent-skill/
 │   └── src/main/java/.../skill/
 │       ├── config/
@@ -564,10 +571,87 @@ easy-agent/
                 │   └── org.springframework.boot.autoconfigure.AutoConfiguration.imports
                 └── spring-configuration-metadata.json
 ```
-## License
+## 测试
+### 1. llm模块
+```java
+    // 基本LLM对话能力
+    @GetMapping("chat-message")
+    public ChatResponse chatMessage(@RequestParam String query) {
+        ChatMessage userMessage = new ChatMessage(ChatMessage.Role.USER, query);
+        ChatMessage systemMessage = new ChatMessage(ChatMessage.Role.SYSTEM, query);
+        List<ChatMessage> chatMessage = List.of(systemMessage, userMessage);
+        ChatResponse chat = llmService.chat(chatMessage);
+        return chat;
+    }
+	// 简单流式对话
+	@GetMapping("/chat/stream")
+	public ResponseEntity<StreamingResponseBody> chatStream(@RequestParam String message) {
+		StreamingResponseBody stream = outputStream -> {
+			StringBuilder fullResponse = new StringBuilder();
+			Writer writer = new OutputStreamWriter(outputStream);
+			List<ChatMessage> messages = List.of(ChatMessage.user(message));
+			llmService.chatStream(messages, token -> {
+				if (token != null) {
+					fullResponse.append(token);
+					try {
+						writer.write(token);
+						writer.flush();
+					} catch (IOException e) {
+						throw new RuntimeException(e);
+					}
+				} else {
+					try {
+						writer.write("\n[DONE]");
+						writer.flush();
+					} catch (IOException e) {
+						throw new RuntimeException(e);
+					}
 
-[Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0)
+				}
+			});
+		};
+		return ResponseEntity.ok()
+				.contentType(MediaType.parseMediaType("text/event-stream;charset=UTF-8"))
+				.header("Cache-Control", "no-cache")
+				.header("X-Accel-Buffering", "no")
+				.body(stream);
+	}
+```
+### 2. mcp模块
+```java
+    // 先准备两个工具
+    @Component
+    public class McpServiceTools {
+        @EasyTool(name = "hello", description = "向用户打招呼")
+        public String sayHello(String name) {
+            return "你好，" + name + "！欢迎使用 easy-agent！";
+        }
+        
+        @EasyTool(name = "add", description = "计算两个数字的和")
+        public int add(int a, int b) {
+            System.out.println("正在计算两个数字的和...");
+            return a + b;
+        }
+    }
 
----
+    /**
+     *将测试服务启动，安装 Claude code后使用 add claude mcp http://localhost:8080/mcp 将服务端注册为MCP服务
+     *启动claude 问我有哪些功能，此时会列出注册的工具
+     */
+```
+### 3. rag模块
+```java
+    // rag增强搜索能力
+    @GetMapping("/chat-rag-message")
+    public ChatResponse chtatRagMessage(@RequestParam String query,
+                                        @RequestParam(defaultValue = "2") int topK) {
+        List<DocumentChunk> results = ragService.search(query, topK);
+        ChatMessage userMessage = new ChatMessage(ChatMessage.Role.USER, results.toString());
+        ChatMessage systemMessage = new ChatMessage(ChatMessage.Role.SYSTEM, "从内容中抽出问答对中的，A的内容直接返回，不要加额外任何内容");
+        List<ChatMessage> chatMessage = List.of(systemMessage, userMessage);
+        ChatResponse chat = llmService.chat(chatMessage);
+        return chat;
+    }
+```
 
 

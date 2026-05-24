@@ -165,4 +165,56 @@ public class OpenAiCompatibleClient {
     public String getProviderName() {
         return providerName;
     }
+
+    public void chatStream(List<ChatMessage> messages, java.util.function.Consumer<String> consumer) {
+        List<OpenAiCompatibleApi.ChatMessage> apiMessages = convertMessages(messages);
+        OpenAiCompatibleApi.ChatCompletionRequest request = new OpenAiCompatibleApi.ChatCompletionRequest(
+                model, apiMessages, chatOptions.getTemperature(), chatOptions.getTopP(),
+                chatOptions.getMaxTokens(), null, true  // stream: true
+        );
+
+        try {
+            String requestBody = OBJECT_MAPPER.writeValueAsString(request);
+
+            HttpRequest.Builder httpRequestBuilder = HttpRequest.newBuilder()
+                    .uri(URI.create(baseUrl + "/v1/chat/completions"))
+                    .header("Content-Type", "application/json")
+                    .timeout(Duration.ofSeconds(120))
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody));
+
+            if (apiKey != null && !apiKey.isBlank()) {
+                httpRequestBuilder.header("Authorization", "Bearer " + apiKey);
+            }
+
+            HttpRequest httpRequest = httpRequestBuilder.build();
+
+            // SSE流式响应处理
+            httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofLines())
+                    .body()
+                    .forEach(line -> {
+                        if (line.startsWith("data: ")) {
+                            String data = line.substring(6);
+                            if ("[DONE]".equals(data)) {
+                                consumer.accept(null); // 流结束信号
+                            } else {
+                                try {
+                                    OpenAiCompatibleApi.ChatCompletionResponse response =
+                                            OBJECT_MAPPER.readValue(data, OpenAiCompatibleApi.ChatCompletionResponse.class);
+                                    if (response.choices() != null && !response.choices().isEmpty()) {
+                                        String content = response.choices().get(0).delta().content();
+                                        if (content != null && !content.isEmpty()) {
+                                            consumer.accept(content);
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    log.debug("Failed to parse SSE line: {}", line);
+                                }
+                            }
+                        }
+                    });
+        } catch (Exception e) {
+            if (e instanceof RuntimeException) throw (RuntimeException) e;
+            throw new RuntimeException(providerName + " streaming failed", e);
+        }
+    }
 }

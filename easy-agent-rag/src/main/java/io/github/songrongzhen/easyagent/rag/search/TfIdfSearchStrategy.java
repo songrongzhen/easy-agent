@@ -54,9 +54,7 @@ public class TfIdfSearchStrategy implements SearchStrategy {
         
         // 按得分排序
         scored.sort((a, b) -> Double.compare(b.score, a.score));
-        
-        log.debug("TF-IDF search: query={}, topK={}, matched={}", query, topK, scored.size());
-        
+
         return scored.stream()
                 .limit(topK)
                 .map(ScoredChunk::chunk)

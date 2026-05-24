@@ -85,6 +85,7 @@ public class OpenAiCompatibleApi {
     public record Choice(
             @JsonProperty("index") int index,
             @JsonProperty("message") ChatMessage message,
+            @JsonProperty("delta") ChatMessage delta,
             @JsonProperty("finish_reason") String finishReason
     ) {}
 
