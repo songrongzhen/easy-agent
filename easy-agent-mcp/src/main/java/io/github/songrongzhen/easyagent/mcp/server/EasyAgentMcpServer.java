@@ -3,11 +3,14 @@ package io.github.songrongzhen.easyagent.mcp.server;
 import io.github.songrongzhen.easyagent.core.executor.ToolExecutor;
 import io.github.songrongzhen.easyagent.core.registry.ToolRegistry;
 import io.github.songrongzhen.easyagent.mcp.adapter.McpToolAdapter;
+import io.github.songrongzhen.easyagent.mcp.adapter.SkillMcpAdapter;
 import io.github.songrongzhen.easyagent.mcp.config.EasyAgentMcpProperties;
 import io.github.songrongzhen.easyagent.mcp.protocol.McpProtocol;
+import io.github.songrongzhen.easyagent.skill.service.SkillGeneratorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -17,12 +20,15 @@ public class EasyAgentMcpServer {
 
     private final EasyAgentMcpProperties properties;
     private final McpToolAdapter mcpToolAdapter;
+    private final SkillMcpAdapter skillMcpAdapter;
 
     public EasyAgentMcpServer(EasyAgentMcpProperties properties,
                               ToolRegistry toolRegistry,
-                              ToolExecutor toolExecutor) {
+                              ToolExecutor toolExecutor,
+                              SkillGeneratorService skillGeneratorService) {
         this.properties = properties;
         this.mcpToolAdapter = new McpToolAdapter(toolRegistry, toolExecutor);
+        this.skillMcpAdapter = (skillGeneratorService != null) ? new SkillMcpAdapter(skillGeneratorService) : null;
     }
 
     public McpProtocol.JsonRpcResponse handleRequest(McpProtocol.JsonRpcRequest request) {
@@ -61,7 +67,10 @@ public class EasyAgentMcpServer {
     }
 
     private McpProtocol.ListToolsResult handleToolsList() {
-        List<McpProtocol.Tool> tools = mcpToolAdapter.convertToMcpTools();
+        List<McpProtocol.Tool> tools = new ArrayList<>(mcpToolAdapter.convertToMcpTools());
+        if (skillMcpAdapter != null) {
+            tools.addAll(skillMcpAdapter.getSkillTools());
+        }
         return new McpProtocol.ListToolsResult(tools);
     }
 
@@ -82,6 +91,19 @@ public class EasyAgentMcpServer {
             );
         }
         
+        if (toolName.startsWith("skill.")) {
+            if (skillMcpAdapter == null) {
+                return new McpProtocol.CallToolResult(
+                        List.of(McpProtocol.Content.text("Error: Skill module is not enabled")),
+                        true
+                );
+            }
+            log.info("MCP skill tool call: {}", toolName);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> arguments = (Map<String, Object>) params.get("arguments");
+            return skillMcpAdapter.executeSkillTool(toolName, arguments);
+        }
+        
         @SuppressWarnings("unchecked")
         Map<String, Object> arguments = (Map<String, Object>) params.get("arguments");
         log.info("MCP tool call: {}", toolName);
@@ -97,7 +119,10 @@ public class EasyAgentMcpServer {
     }
 
     public void start() {
-        List<McpProtocol.Tool> tools = mcpToolAdapter.convertToMcpTools();
+        List<McpProtocol.Tool> tools = new ArrayList<>(mcpToolAdapter.convertToMcpTools());
+        if (skillMcpAdapter != null) {
+            tools.addAll(skillMcpAdapter.getSkillTools());
+        }
         log.info("Easy Agent MCP Server started - {} tools available", tools.size());
         for (McpProtocol.Tool tool : tools) {
             log.info("  MCP Tool: {} - {}", tool.name(), tool.description());

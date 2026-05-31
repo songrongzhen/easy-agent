@@ -406,64 +406,56 @@ docker-compose up -d
 ## 完整配置参考
 
 ```yaml
+server:
+  port: 8999
+  tomcat :
+    socket:
+      soLingerOn: false
 easy-agent:
-  # ===== LLM 模块 =====
-  llm:
-    enabled: true
-    provider: none  # none / dashscope / deepseek / ollama / openai
-    dash-scope:
-      api-key: 
-      model: qwen-max
-      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
-    deep-seek:
-      api-key: 
-      model: deepseek-chat
-      base-url: https://api.deepseek.com
-    ollama:
-      base-url: http://localhost:11434
-      model: llama3
-    open-ai:
-      api-key: 
-      model: gpt-4o
-      base-url: https://api.openai.com
-    chat-options:
-      temperature: 0.7
-      top-p: 1.0
-      max-tokens: 4096
-
-  # ===== RAG 模块 =====
-  rag:
-    enabled: true
-    storage-type: auto  # auto / pgvector / pdf / in-memory
-    pg-vector:
-      enabled: true
-      table-name: easy_agent_vector_store
-      dimensions: 1536
-    pdf:
-      enabled: true
-      resource-path: classpath:knowledge/
-      chunk-size: 1000
-      chunk-overlap: 200
-    embedding:
-      model: text-embedding-v3
-      dimensions: 1536
-
-  # ===== MCP 模块 =====
+  # MCP 配置
   mcp:
     enabled: true
-    transport-type: sse  # sse / stdio
-    sse-endpoint: /mcp/sse
-    message-endpoint: /mcp/messages
-    server-name: easy-agent-mcp-server
-    server-version: 0.1.0
-
-  # ===== Skill 模块 =====
-  skill:
+  llm :
     enabled: true
-    skill-path: classpath:skills/
-    hot-reload: true
-    watch-interval: 5000
-    file-pattern: SKILL.md
+    model: "qwen-plus"
+    api-key: ${your api key}
+
+  # RAG 配置（可选）
+  rag:
+    # 是否启用 RAG 功能
+    enabled: true
+    # 向量存储类型：AUTO（自动选择）、PGVECTOR（PostgreSQL向量库）、IN_MEMORY（内存模式）
+    storage-type: IN_MEMORY
+    search:
+      # 搜索策略：AUTO（自动选择）、EMBEDDING（向量检索）、COSINE（余弦相似度）、TF_IDF
+      strategy: AUTO
+      embedding:
+        # 是否启用 Embedding 向量检索（最精准，但需要配置 Embedding 服务）
+        enabled: true
+        # Embedding 服务提供者：AUTO、OLLAMA、OPENAI、DASHSCOPE
+        provider: DASHSCOPE
+        # Embedding 模型名称
+        model: nomic-embed-text
+      cosine:
+        # 是否启用余弦相似度搜索（作为 Embedding 的降级方案）
+        enabled: true
+      tfidf:
+        # 是否启用 TF-IDF 搜索（兜底方案，不需要外部服务）
+        enabled: true
+    pdf:
+      # 是否启用 PDF 文档加载
+      enabled: true
+      # PDF 文件所在目录（支持 classpath: 前缀）
+      resource-path: classpath:knowledge/
+    excel:
+      # 是否启用 Excel 文档加载
+      enabled: true
+      # Excel 文件所在目录（支持 classpath: 前缀）
+      resource-path: classpath:knowledge/
+# 日志配置
+logging:
+  level:
+    io.github.songrongzhen: DEBUG
 ```
 
 ---
@@ -652,6 +644,12 @@ easy-agent/
         ChatResponse chat = llmService.chat(chatMessage);
         return chat;
     }
+```
+### 4. skill模块
+```java
+// （***前提1）通过  @EasyTool注解 定义了 向用户打招呼、计算两个数字的和接口
+// （***前提2）安装 Claude code后使用 add claude mcp http://localhost:8080/mcp 将服务端注册为MCP服务
+// 启动claude 问我有哪些功能，此时会列出注册的工具，其中有[easy-agent:skill_generate - 生成 SKILL.md 文件],此时说我想生成一个skill，根据提示输入，claude会生成一个SKILL.md文件，在你的项目根目录下skill目录中
 ```
 
 

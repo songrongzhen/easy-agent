@@ -7,22 +7,21 @@ public class EasyAgentSkillProperties {
 
     private boolean enabled = true;
 
-    private String skillPath = "classpath:skills/";
+    private String skillOutputPath = ".";
 
-    private boolean hotReload = true;
+    public boolean isEnabled() {
+        return enabled;
+    }
 
-    private long watchInterval = 5000;
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
 
-    private String filePattern = "SKILL.md";
+    public String getSkillOutputPath() {
+        return skillOutputPath;
+    }
 
-    public boolean isEnabled() { return enabled; }
-    public void setEnabled(boolean enabled) { this.enabled = enabled; }
-    public String getSkillPath() { return skillPath; }
-    public void setSkillPath(String skillPath) { this.skillPath = skillPath; }
-    public boolean isHotReload() { return hotReload; }
-    public void setHotReload(boolean hotReload) { this.hotReload = hotReload; }
-    public long getWatchInterval() { return watchInterval; }
-    public void setWatchInterval(long watchInterval) { this.watchInterval = watchInterval; }
-    public String getFilePattern() { return filePattern; }
-    public void setFilePattern(String filePattern) { this.filePattern = filePattern; }
+    public void setSkillOutputPath(String skillOutputPath) {
+        this.skillOutputPath = skillOutputPath;
+    }
 }
