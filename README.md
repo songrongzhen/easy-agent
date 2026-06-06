@@ -302,7 +302,7 @@ easy-agent:
 <dependency>
     <groupId>io.github.songrongzhen</groupId>
     <artifactId>easy-agent-spring-boot-starter</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.6</version>
 </dependency>
 ```
 
