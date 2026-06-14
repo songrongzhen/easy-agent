@@ -15,7 +15,7 @@
 
 ## 项目简介
 
-Easy Agent 是一个即插即用的 Java 智能体（Agent）开发套件，深度拥抱 Spring 生态，旨在让任何基于 Spring Boot 的应用系统快速接入 AI 能力。开发者只需引入一个 Starter 依赖，即可获得注解式工具注册、声明式 Skill 定义、RAG 检索增强、多模型适配和 MCP 协议支持等核心能力，整个过程零侵入、零配置。
+Easy Agent 是一个即插即用的 Java 智能体（Agent）开发组件，深度拥抱 Spring 生态，旨在让任何基于 Spring Boot 的应用系统快速接入 AI 能力。开发者只需引入一个 Starter 依赖，即可获得注解式工具注册、声明式 Skill 定义、RAG 检索增强、多模型适配和 MCP 协议支持等核心能力，整个过程零侵入、零配置。
 
 ### 核心理念
 
