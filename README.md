@@ -1,7 +1,7 @@
 # Easy Agent
 
 <p align="center">
-  <strong> Java 应用打造的 Agent 开发套件</strong>
+  <strong> Java 应用打造的 Agent 开发组件</strong>
 </p>
 
 <p align="center">
