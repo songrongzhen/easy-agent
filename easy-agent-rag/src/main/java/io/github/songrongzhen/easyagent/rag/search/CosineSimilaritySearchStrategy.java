@@ -63,7 +63,7 @@ public class CosineSimilaritySearchStrategy implements SearchStrategy {
         
         return scored.stream()
                 .limit(topK)
-                .map(ScoredChunk::chunk)
+                .map(scoredChunk -> scoredChunk.chunk().withScore(scoredChunk.similarity()))
                 .collect(Collectors.toList());
     }
 

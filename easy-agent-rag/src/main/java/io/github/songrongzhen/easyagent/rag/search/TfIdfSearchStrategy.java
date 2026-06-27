@@ -57,7 +57,7 @@ public class TfIdfSearchStrategy implements SearchStrategy {
 
         return scored.stream()
                 .limit(topK)
-                .map(ScoredChunk::chunk)
+                .map(scoredChunk -> scoredChunk.chunk().withScore(scoredChunk.score()))
                 .collect(Collectors.toList());
     }
 

@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
-public class ExcelDocumentLoader {
+public class ExcelDocumentLoader implements DocumentLoader {
 
     private static final Logger log = LoggerFactory.getLogger(ExcelDocumentLoader.class);
 
@@ -25,6 +25,9 @@ public class ExcelDocumentLoader {
         this.resourcePath = resourcePath;
     }
 
+    /**
+     * 加载资源目录下的 Excel 文档。
+     */
     public List<DocumentChunk> load() {
         List<DocumentChunk> allChunks = new ArrayList<>();
         log.info("Excel loader: Starting to load from path: {}", resourcePath);
@@ -51,7 +54,7 @@ public class ExcelDocumentLoader {
                 String filename = resource.getFilename();
                 log.info("Loading Excel document: {}", filename);
                 try {
-                    List<DocumentChunk> chunks = loadExcel(resource);
+                    List<DocumentChunk> chunks = load(filename, filename, resource.getInputStream());
                     allChunks.addAll(chunks);
                     log.info("Loaded {} chunks from {}", chunks.size(), filename);
                 } catch (Exception e) {
@@ -65,25 +68,44 @@ public class ExcelDocumentLoader {
         return allChunks;
     }
 
-    private List<DocumentChunk> loadExcel(Resource resource) throws IOException {
+    /**
+     * 判断是否支持该 Excel 文件。
+     */
+    @Override
+    public boolean supports(String filename) {
+        if (filename == null) {
+            return false;
+        }
+        String lowerFilename = filename.toLowerCase();
+        return lowerFilename.endsWith(".xlsx") || lowerFilename.endsWith(".xls");
+    }
+
+    /**
+     * 从输入流加载 Excel 文档块。
+     */
+    @Override
+    public List<DocumentChunk> load(String documentId, String filename, InputStream inputStream) throws IOException {
+        String resolvedDocumentId = documentId != null && !documentId.isBlank() ? documentId : filename;
+        return loadExcel(resolvedDocumentId, filename, inputStream);
+    }
+
+    private List<DocumentChunk> loadExcel(String documentId, String filename, InputStream inputStream) throws IOException {
         List<DocumentChunk> chunks = new ArrayList<>();
-        String filename = resource.getFilename();
         
-        try (InputStream is = resource.getInputStream();
-             Workbook workbook = createWorkbook(is, filename)) {
+        try (Workbook workbook = createWorkbook(inputStream, filename)) {
             
             for (int sheetIndex = 0; sheetIndex < workbook.getNumberOfSheets(); sheetIndex++) {
                 Sheet sheet = workbook.getSheetAt(sheetIndex);
                 String sheetName = sheet.getSheetName();
                 
-                List<DocumentChunk> sheetChunks = processSheet(sheet, filename, sheetName, sheetIndex);
+                List<DocumentChunk> sheetChunks = processSheet(sheet, documentId, filename, sheetName, sheetIndex);
                 chunks.addAll(sheetChunks);
             }
         }
         return chunks;
     }
 
-    private List<DocumentChunk> processSheet(Sheet sheet, String filename, String sheetName, int sheetIndex) {
+    private List<DocumentChunk> processSheet(Sheet sheet, String documentId, String filename, String sheetName, int sheetIndex) {
         List<DocumentChunk> chunks = new ArrayList<>();
         
         int firstRow = sheet.getFirstRowNum();
@@ -108,7 +130,7 @@ public class ExcelDocumentLoader {
             if (row == null) continue;
 
             try {
-                DocumentChunk chunk = createChunkFromRow(row, headers, filename, sheetName, rowIndex);
+                DocumentChunk chunk = createChunkFromRow(row, headers, documentId, filename, sheetName, sheetIndex, rowIndex);
                 if (chunk != null) {
                     chunks.add(chunk);
                 }
@@ -120,13 +142,15 @@ public class ExcelDocumentLoader {
         return chunks;
     }
 
-    private DocumentChunk createChunkFromRow(Row row, List<String> headers, String filename, 
-                                             String sheetName, int rowIndex) {
+    private DocumentChunk createChunkFromRow(Row row, List<String> headers, String documentId, String filename,
+                                             String sheetName, int sheetIndex, int rowIndex) {
         StringBuilder content = new StringBuilder();
         Map<String, Object> metadata = new HashMap<>();
         
+        metadata.put("documentId", documentId);
         metadata.put("source", filename);
         metadata.put("sheet", sheetName);
+        metadata.put("sheetIndex", sheetIndex);
         metadata.put("rowIndex", rowIndex);
         
         boolean hasContent = false;
@@ -148,7 +172,7 @@ public class ExcelDocumentLoader {
         }
 
         return new DocumentChunk(
-                filename + "-" + sheetName + "-row-" + rowIndex,
+                documentId + "-sheet-" + sheetIndex + "-row-" + rowIndex,
                 content.toString().trim(),
                 filename,
                 metadata,

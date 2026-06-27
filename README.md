@@ -128,7 +128,7 @@ Skill 模块当前提供的是 SKILL.md 生成能力：通过 MCP 暴露 `skill.
 
 ### 3. RAG 检索增强生成
 
-RAG 模块支持在启动时加载 `classpath:knowledge/` 下的 PDF、Excel 文件，切分为 `DocumentChunk` 后放入内存存储，并提供 Embedding、Cosine、TF-IDF 三种搜索策略。
+RAG 模块支持在启动时加载 `classpath:knowledge/` 下的 PDF、Excel 文件，切分为 `DocumentChunk` 后放入检索存储，并提供 Embedding、Cosine、TF-IDF 三种搜索策略。检索结果会在 `DocumentChunk.score` 中携带相关性分数。
 
 **存储策略：**
 
@@ -136,14 +136,33 @@ RAG 模块支持在启动时加载 `classpath:knowledge/` 下的 PDF、Excel 文
 |------|----------|
 | `AUTO` | 使用内存存储 |
 | `IN_MEMORY` | 使用内存存储 |
-| `PGVECTOR` | 枚举和占位类已存在，但当前自动装配仍使用内存存储 |
+| `PGVECTOR` | 会创建 PgVector 占位 Provider，但当前 add/search/delete 仍不可用 |
+
+> 当前推荐使用 `AUTO` 或 `IN_MEMORY`。PgVector 配置和占位类已存在，但还不是完整可用的持久化向量库实现。
+
+**搜索策略：**
+
+- `AUTO` 会按 Embedding、Cosine、TF-IDF 顺序降级检索
+- Embedding 检索会在文档加入内存存储时生成文档向量，查询时只生成 query 向量
+- Cosine 和 TF-IDF 不依赖外部服务，适合作为本地兜底策略
 
 **文档加载：**
 
 - 自动扫描 `classpath:knowledge/` 下的 PDF 文件、Excel 文件
 - PDF 支持按字符长度分块（可配置 chunk 大小和重叠）
+- PDF 的 `chunk-overlap` 必须小于 `chunk-size`
 - Excel 按行生成文档块
 - 启动时自动索引，无需手动操作
+
+**运行时维护：**
+
+- 支持运行时添加 PDF、Excel 文档到知识库
+- 支持按 `source` 删除文档块
+- 支持按 `documentId` 删除文档块
+- 支持清空索引
+- 支持重新扫描默认知识库目录并重建索引
+
+> easy-agent 只提供 Java API，不默认暴露上传接口。业务系统负责上传入口、权限控制、文件大小限制、用户或租户隔离。
 
 ```java
 @Service
@@ -326,10 +345,10 @@ easy-agent:
     # 是否启用 RAG 功能
     enabled: true
     # 向量存储类型：AUTO、IN_MEMORY、PGVECTOR
-    # 当前自动装配使用内存存储
+    # AUTO 和 IN_MEMORY 使用内存存储
     storage-type: IN_MEMORY
     search:
-      # 搜索策略：AUTO（自动选择）、EMBEDDING（向量检索）、COSINE（余弦相似度）、TF_IDF
+      # 搜索策略：AUTO（Embedding -> Cosine -> TF-IDF 降级）、EMBEDDING、COSINE、TF_IDF
       strategy: AUTO
       embedding:
         # 是否启用 Embedding 向量检索（最精准，但需要配置 Embedding 服务）
@@ -349,11 +368,17 @@ easy-agent:
       enabled: true
       # PDF 文件所在目录（支持 classpath: 前缀）
       resource-path: classpath:knowledge/
+      # PDF 文档块字符长度
+      chunk-size: 1000
+      # PDF 文档块重叠字符数，必须小于 chunk-size
+      chunk-overlap: 200
     excel:
       # 是否启用 Excel 文档加载
       enabled: true
       # Excel 文件所在目录（支持 classpath: 前缀）
       resource-path: classpath:knowledge/
+
+# 说明：pdf.enabled 和 excel.enabled 同时影响启动加载和运行时 addDocument 支持的文件类型。
 
   # Skill 配置（可选）
   skill:
@@ -438,10 +463,10 @@ easy-agent:
     # 是否启用 RAG 功能
     enabled: true
     # 向量存储类型：AUTO、IN_MEMORY、PGVECTOR
-    # 当前自动装配使用内存存储
+    # AUTO 和 IN_MEMORY 使用内存存储
     storage-type: IN_MEMORY
     search:
-      # 搜索策略：AUTO（自动选择）、EMBEDDING（向量检索）、COSINE（余弦相似度）、TF_IDF
+      # 搜索策略：AUTO（Embedding -> Cosine -> TF-IDF 降级）、EMBEDDING、COSINE、TF_IDF
       strategy: AUTO
       embedding:
         # 是否启用 Embedding 向量检索（最精准，但需要配置 Embedding 服务）
@@ -461,11 +486,16 @@ easy-agent:
       enabled: true
       # PDF 文件所在目录（支持 classpath: 前缀）
       resource-path: classpath:knowledge/
+      # PDF 文档块字符长度
+      chunk-size: 1000
+      # PDF 文档块重叠字符数，必须小于 chunk-size
+      chunk-overlap: 200
     excel:
       # 是否启用 Excel 文档加载
       enabled: true
       # Excel 文件所在目录（支持 classpath: 前缀）
       resource-path: classpath:knowledge/
+# 说明：pdf.enabled 和 excel.enabled 同时影响启动加载和运行时 addDocument 支持的文件类型。
   # Skill 配置（可选）
   skill:
     enabled: true
@@ -519,6 +549,7 @@ easy-agent/
 │       │   ├── VectorStoreProviderFactory.java # 存储工厂
 │       │   └── DocumentChunk.java             # 文档分块模型
 │       ├── loader/
+│       │   ├── DocumentLoader.java            # 文档加载接口
 │       │   ├── PdfDocumentLoader.java         # PDF 文档加载与分块
 │       │   └── ExcelDocumentLoader.java       # Excel 文档加载与分块
 │       ├── search/
@@ -673,6 +704,55 @@ easy-agent/
         return chat;
     }
 ```
+
+运行时维护知识库：
+
+```java
+@RestController
+@RequestMapping("/knowledge")
+public class KnowledgeController {
+
+    private final RagService ragService;
+
+    public KnowledgeController(RagService ragService) {
+        this.ragService = ragService;
+    }
+
+    @PostMapping("/upload")
+    public List<DocumentChunk> upload(@RequestParam MultipartFile file) throws IOException {
+        return ragService.addDocument(file.getOriginalFilename(), file.getInputStream());
+    }
+
+    @PostMapping("/{documentId}/upload")
+    public List<DocumentChunk> uploadWithDocumentId(@PathVariable String documentId,
+                                                    @RequestParam MultipartFile file) throws IOException {
+        return ragService.addDocument(documentId, file.getOriginalFilename(), file.getInputStream());
+    }
+
+    @DeleteMapping("/source")
+    public void deleteBySource(@RequestParam String source) {
+        ragService.deleteBySource(source);
+    }
+
+    @DeleteMapping("/{documentId}")
+    public void deleteByDocumentId(@PathVariable String documentId) {
+        ragService.deleteByDocumentId(documentId);
+    }
+
+    @DeleteMapping
+    public void clearIndex() {
+        ragService.clearIndex();
+    }
+
+    @PostMapping("/rebuild")
+    public void rebuildIndex() {
+        ragService.rebuildIndex();
+    }
+}
+```
+
+`addDocument(filename, inputStream)` 会自动生成 `documentId`，返回的 `DocumentChunk.metadata` 中包含该值。业务系统如果已有自己的文件 ID，建议调用 `addDocument(documentId, filename, inputStream)`，后续可以直接用该 ID 删除或替换文档。
+
 ### 4. skill模块
 ```java
 // （***前提1）通过  @EasyTool注解 定义了 向用户打招呼、计算两个数字的和接口

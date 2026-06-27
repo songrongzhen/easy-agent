@@ -31,6 +31,20 @@ public interface VectorStoreProvider {
     void delete(List<String> ids);
 
     /**
+     * 删除指定来源的文档块。
+     *
+     * @param source 文档来源
+     */
+    void deleteBySource(String source);
+
+    /**
+     * 删除指定文档ID的文档块。
+     *
+     * @param documentId 文档ID
+     */
+    void deleteByDocumentId(String documentId);
+
+    /**
      * 删除所有文档
      */
     void deleteAll();

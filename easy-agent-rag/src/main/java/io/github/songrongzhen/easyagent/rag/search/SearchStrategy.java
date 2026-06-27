@@ -21,6 +21,16 @@ public interface SearchStrategy {
     List<DocumentChunk> search(String query, List<DocumentChunk> documents, int topK);
 
     /**
+     * 文档入库前的准备动作，例如生成文档向量。
+     *
+     * @param documents 待入库文档
+     * @return 准备后的文档
+     */
+    default List<DocumentChunk> prepareDocuments(List<DocumentChunk> documents) {
+        return documents;
+    }
+
+    /**
      * 获取策略名称
      *
      * @return 策略名称

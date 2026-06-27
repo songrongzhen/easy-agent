@@ -1,6 +1,7 @@
 package io.github.songrongzhen.easyagent.rag.service;
 
 import io.github.songrongzhen.easyagent.rag.config.EasyAgentRagProperties;
+import io.github.songrongzhen.easyagent.rag.loader.DocumentLoader;
 import io.github.songrongzhen.easyagent.rag.loader.ExcelDocumentLoader;
 import io.github.songrongzhen.easyagent.rag.loader.PdfDocumentLoader;
 import io.github.songrongzhen.easyagent.rag.store.DocumentChunk;
@@ -9,7 +10,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import jakarta.annotation.PostConstruct;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class RagService {
 
@@ -17,10 +22,12 @@ public class RagService {
 
     private final VectorStoreProvider vectorStoreProvider;
     private final EasyAgentRagProperties properties;
+    private final List<DocumentLoader> documentLoaders;
 
     public RagService(VectorStoreProvider vectorStoreProvider, EasyAgentRagProperties properties) {
         this.vectorStoreProvider = vectorStoreProvider;
         this.properties = properties;
+        this.documentLoaders = createDocumentLoaders(properties);
     }
 
     @PostConstruct
@@ -79,6 +86,58 @@ public class RagService {
         indexExcelDocuments();
     }
 
+    /**
+     * 添加运行时文档到知识库。
+     */
+    public synchronized List<DocumentChunk> addDocument(String filename, InputStream inputStream) throws IOException {
+        return addDocument(generateDocumentId(filename), filename, inputStream);
+    }
+
+    /**
+     * 添加指定文档ID的运行时文档到知识库。
+     */
+    public synchronized List<DocumentChunk> addDocument(String documentId, String filename, InputStream inputStream) throws IOException {
+        validateDocumentInput(documentId, filename, inputStream);
+        DocumentLoader loader = resolveLoader(filename);
+        List<DocumentChunk> chunks = loader.load(documentId, filename, inputStream);
+        if (!chunks.isEmpty()) {
+            vectorStoreProvider.deleteByDocumentId(documentId);
+            vectorStoreProvider.add(chunks);
+            log.info("Added runtime document: documentId={}, filename={}, chunks={}", documentId, filename, chunks.size());
+        }
+        return chunks;
+    }
+
+    /**
+     * 删除指定来源的文档块。
+     */
+    public synchronized void deleteBySource(String source) {
+        vectorStoreProvider.deleteBySource(source);
+    }
+
+    /**
+     * 删除指定文档ID的文档块。
+     */
+    public synchronized void deleteByDocumentId(String documentId) {
+        vectorStoreProvider.deleteByDocumentId(documentId);
+    }
+
+    /**
+     * 清空知识库索引。
+     */
+    public synchronized void clearIndex() {
+        vectorStoreProvider.deleteAll();
+    }
+
+    /**
+     * 清空并重建默认知识库索引。
+     */
+    public synchronized void rebuildIndex() {
+        vectorStoreProvider.deleteAll();
+        indexAllDocuments();
+        log.info("RAG index rebuilt with {} document chunks", vectorStoreProvider.count());
+    }
+
     public List<DocumentChunk> search(String query, int topK) {
         return vectorStoreProvider.search(query, topK);
     }
@@ -124,5 +183,44 @@ public class RagService {
         } catch (Exception e) {
             return List.of();
         }
+    }
+
+    private List<DocumentLoader> createDocumentLoaders(EasyAgentRagProperties properties) {
+        List<DocumentLoader> loaders = new ArrayList<>();
+        if (properties.getPdf().isEnabled()) {
+            loaders.add(new PdfDocumentLoader(
+                    properties.getPdf().getResourcePath(),
+                    properties.getPdf().getChunkSize(),
+                    properties.getPdf().getChunkOverlap()
+            ));
+        }
+        if (properties.getExcel().isEnabled()) {
+            loaders.add(new ExcelDocumentLoader(properties.getExcel().getResourcePath()));
+        }
+        return loaders;
+    }
+
+    private DocumentLoader resolveLoader(String filename) {
+        return documentLoaders.stream()
+                .filter(loader -> loader.supports(filename))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Unsupported document type: " + filename));
+    }
+
+    private void validateDocumentInput(String documentId, String filename, InputStream inputStream) {
+        if (documentId == null || documentId.isBlank()) {
+            throw new IllegalArgumentException("documentId must not be blank");
+        }
+        if (filename == null || filename.isBlank()) {
+            throw new IllegalArgumentException("filename must not be blank");
+        }
+        if (inputStream == null) {
+            throw new IllegalArgumentException("inputStream must not be null");
+        }
+    }
+
+    private String generateDocumentId(String filename) {
+        String source = filename != null && !filename.isBlank() ? filename : "document";
+        return source + "-" + UUID.randomUUID();
     }
 }

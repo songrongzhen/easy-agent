@@ -25,6 +25,30 @@ public class EmbeddingSearchStrategy implements SearchStrategy {
     }
 
     @Override
+    public List<DocumentChunk> prepareDocuments(List<DocumentChunk> documents) {
+        if (documents == null || documents.isEmpty()) {
+            return List.of();
+        }
+
+        List<DocumentChunk> prepared = new ArrayList<>(documents.size());
+        for (DocumentChunk doc : documents) {
+            if (doc.embedding() != null) {
+                prepared.add(doc);
+                continue;
+            }
+
+            try {
+                prepared.add(doc.withEmbedding(embeddingModel.embed(doc.content())));
+            } catch (Exception e) {
+                log.warn("Failed to create embedding for document: source={}, id={}, message={}",
+                        doc.source(), doc.id(), e.getMessage());
+                prepared.add(doc);
+            }
+        }
+        return prepared;
+    }
+
+    @Override
     public List<DocumentChunk> search(String query, List<DocumentChunk> documents, int topK) {
         if (documents == null || documents.isEmpty()) {
             return List.of();
@@ -33,20 +57,12 @@ public class EmbeddingSearchStrategy implements SearchStrategy {
         try {
             // 获取查询向量
             float[] queryEmbedding = embeddingModel.embed(query);
-            
-            // 缓存文档向量
-            Map<String, float[]> embeddingCache = new HashMap<>();
             List<ScoredChunk> scored = new ArrayList<>();
             
             for (DocumentChunk doc : documents) {
-                String cacheKey = doc.id() != null ? doc.id() : doc.content().substring(0, Math.min(100, doc.content().length()));
-                
-                float[] docEmbedding;
-                if (embeddingCache.containsKey(cacheKey)) {
-                    docEmbedding = embeddingCache.get(cacheKey);
-                } else {
+                float[] docEmbedding = doc.embedding();
+                if (docEmbedding == null) {
                     docEmbedding = embeddingModel.embed(doc.content());
-                    embeddingCache.put(cacheKey, docEmbedding);
                 }
                 
                 double similarity = cosineSimilarity(queryEmbedding, docEmbedding);
@@ -62,7 +78,7 @@ public class EmbeddingSearchStrategy implements SearchStrategy {
             
             return scored.stream()
                     .limit(topK)
-                    .map(ScoredChunk::chunk)
+                    .map(scoredChunk -> scoredChunk.chunk().withScore(scoredChunk.similarity()))
                     .collect(Collectors.toList());
             
         } catch (Exception e) {

@@ -24,9 +24,10 @@ public class InMemoryVectorStoreProvider implements VectorStoreProvider {
 
     @Override
     public void add(List<DocumentChunk> chunks) {
-        for (DocumentChunk chunk : chunks) {
+        List<DocumentChunk> preparedChunks = searchStrategy.prepareDocuments(chunks);
+        for (DocumentChunk chunk : preparedChunks) {
             String id = chunk.id() != null ? chunk.id() : "chunk-" + idCounter.incrementAndGet();
-            DocumentChunk withId = new DocumentChunk(id, chunk.content(), chunk.source(), chunk.metadata(), chunk.embedding());
+            DocumentChunk withId = new DocumentChunk(id, chunk.content(), chunk.source(), chunk.metadata(), chunk.embedding(), chunk.score());
             store.put(id, withId);
         }
     }
@@ -44,6 +45,23 @@ public class InMemoryVectorStoreProvider implements VectorStoreProvider {
     @Override
     public void delete(List<String> ids) {
         ids.forEach(store::remove);
+    }
+
+    /**
+     * 删除指定来源的文档块。
+     */
+    @Override
+    public void deleteBySource(String source) {
+        store.entrySet().removeIf(entry -> Objects.equals(source, entry.getValue().source()));
+    }
+
+    /**
+     * 删除指定文档ID的文档块。
+     */
+    @Override
+    public void deleteByDocumentId(String documentId) {
+        store.entrySet().removeIf(entry -> entry.getValue().metadata() != null
+                && Objects.equals(documentId, entry.getValue().metadata().get("documentId")));
     }
 
     @Override

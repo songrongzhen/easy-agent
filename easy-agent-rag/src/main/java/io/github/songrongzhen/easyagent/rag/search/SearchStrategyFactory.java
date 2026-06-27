@@ -33,28 +33,15 @@ public class SearchStrategyFactory {
             return createStrategy(configuredStrategy, properties, embeddingModel);
         }
         
-        // 自动选择策略
-        return createAutoStrategy(properties, embeddingModel);
+        // 自动策略使用降级链
+        return createWithFallback(properties, embeddingModel);
     }
 
     /**
      * 自动选择策略
      */
     private static SearchStrategy createAutoStrategy(EasyAgentRagProperties properties, EmbeddingModel embeddingModel) {
-        if (isEmbeddingAvailable(properties, embeddingModel)) {
-            log.info("Auto-selecting EMBEDDING search strategy (most accurate)");
-            return createStrategy(SearchStrategyType.EMBEDDING, properties, embeddingModel);
-        }
-        
-        // 余弦相似度策略
-        if (properties.getSearch().getCosine().isEnabled()) {
-            log.info("Auto-selecting COSINE search strategy (fallback)");
-            return createStrategy(SearchStrategyType.COSINE, properties, embeddingModel);
-        }
-        
-        // TF-IDF策略（兜底）
-        log.info("Auto-selecting TF-IDF search strategy (last fallback)");
-        return createStrategy(SearchStrategyType.TF_IDF, properties, embeddingModel);
+        return createWithFallback(properties, embeddingModel);
     }
 
     /**
@@ -110,7 +97,12 @@ public class SearchStrategyFactory {
             strategies.add(new CosineSimilaritySearchStrategy(properties.getSearch().getCosine()));
         }
         
-        strategies.add(new TfIdfSearchStrategy(properties.getSearch().getTfIdf()));
+        if (properties.getSearch().getTfIdf().isEnabled()) {
+            strategies.add(new TfIdfSearchStrategy(properties.getSearch().getTfIdf()));
+        }
+        if (strategies.isEmpty()) {
+            return new EmptySearchStrategy();
+        }
         
         return new FallbackSearchStrategy(strategies);
     }
@@ -124,6 +116,20 @@ public class SearchStrategyFactory {
 
         public FallbackSearchStrategy(List<SearchStrategy> strategies) {
             this.strategies = strategies;
+        }
+
+        @Override
+        public List<io.github.songrongzhen.easyagent.rag.store.DocumentChunk> prepareDocuments(
+                List<io.github.songrongzhen.easyagent.rag.store.DocumentChunk> documents) {
+            List<io.github.songrongzhen.easyagent.rag.store.DocumentChunk> prepared = documents;
+            for (SearchStrategy strategy : strategies) {
+                try {
+                    prepared = strategy.prepareDocuments(prepared);
+                } catch (Exception e) {
+                    log.warn("Strategy {} failed to prepare documents: {}", strategy.getName(), e.getMessage());
+                }
+            }
+            return prepared;
         }
 
         @Override
@@ -144,6 +150,27 @@ public class SearchStrategyFactory {
                 }
             }
             return List.of();
+        }
+
+        @Override
+        public String getName() {
+            return "FALLBACK";
+        }
+    }
+
+    private static class EmptySearchStrategy implements SearchStrategy {
+
+        @Override
+        public List<io.github.songrongzhen.easyagent.rag.store.DocumentChunk> search(
+                String query,
+                List<io.github.songrongzhen.easyagent.rag.store.DocumentChunk> documents,
+                int topK) {
+            return List.of();
+        }
+
+        @Override
+        public String getName() {
+            return "EMPTY";
         }
     }
 }

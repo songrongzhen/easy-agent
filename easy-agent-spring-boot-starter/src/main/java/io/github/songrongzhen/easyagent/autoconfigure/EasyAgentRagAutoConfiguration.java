@@ -5,6 +5,7 @@ import io.github.songrongzhen.easyagent.rag.search.SearchStrategy;
 import io.github.songrongzhen.easyagent.rag.search.SearchStrategyFactory;
 import io.github.songrongzhen.easyagent.rag.service.RagService;
 import io.github.songrongzhen.easyagent.rag.store.InMemoryVectorStoreProvider;
+import io.github.songrongzhen.easyagent.rag.store.PgVectorStoreProvider;
 import io.github.songrongzhen.easyagent.rag.store.VectorStoreProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,10 +30,14 @@ public class EasyAgentRagAutoConfiguration {
     @ConditionalOnMissingBean(VectorStoreProvider.class)
     public VectorStoreProvider vectorStoreProvider(EasyAgentRagProperties properties,
                                                   @Autowired(required = false) EmbeddingModel embeddingModel) {
-        log.info("Creating VectorStoreProvider with strategy: {}", properties.getSearch().getStrategy());
-        
+        log.info("Creating VectorStoreProvider with storageType={}, strategy={}",
+                properties.getStorageType(), properties.getSearch().getStrategy());
+
+        if (properties.getStorageType() == EasyAgentRagProperties.StorageType.PGVECTOR) {
+            return new PgVectorStoreProvider(properties);
+        }
+
         SearchStrategy strategy = SearchStrategyFactory.create(properties, embeddingModel);
-        
         return new InMemoryVectorStoreProvider(strategy);
     }
 

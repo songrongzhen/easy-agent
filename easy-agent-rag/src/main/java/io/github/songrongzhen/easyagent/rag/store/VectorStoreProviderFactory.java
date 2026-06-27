@@ -21,7 +21,7 @@ public class VectorStoreProviderFactory {
         
         return switch (storageType) {
             case PGVECTOR -> {
-                yield createInMemory(properties);
+                yield new PgVectorStoreProvider(properties);
             }
             case IN_MEMORY -> createInMemory(properties);
             default -> {

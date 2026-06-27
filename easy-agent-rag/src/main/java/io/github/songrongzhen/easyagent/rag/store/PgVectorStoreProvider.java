@@ -34,6 +34,22 @@ public class PgVectorStoreProvider implements VectorStoreProvider {
         log.warn("PgVector delete is not available. Please configure JdbcTemplate and EmbeddingModel.");
     }
 
+    /**
+     * 删除指定来源的文档块。
+     */
+    @Override
+    public void deleteBySource(String source) {
+        log.warn("PgVector deleteBySource is not available. Please configure JdbcTemplate and EmbeddingModel.");
+    }
+
+    /**
+     * 删除指定文档ID的文档块。
+     */
+    @Override
+    public void deleteByDocumentId(String documentId) {
+        log.warn("PgVector deleteByDocumentId is not available. Please configure JdbcTemplate and EmbeddingModel.");
+    }
+
     @Override
     public void deleteAll() {
         log.warn("PgVector deleteAll is not available. Please configure JdbcTemplate and EmbeddingModel.");

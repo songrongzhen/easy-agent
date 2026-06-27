@@ -37,7 +37,7 @@
       "name": "easy-agent.rag.storage-type",
       "type": "io.github.songrongzhen.easyagent.rag.config.EasyAgentRagProperties$StorageType",
       "defaultValue": "AUTO",
-      "description": "Vector store type: AUTO, PGVECTOR, IN_MEMORY. Current auto-configuration uses in-memory storage."
+      "description": "Vector store type: AUTO, PGVECTOR, IN_MEMORY. AUTO and IN_MEMORY use in-memory storage. PGVECTOR currently creates a placeholder provider."
     },
     {
       "name": "easy-agent.rag.search.strategy",
