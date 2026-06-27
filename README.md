@@ -208,7 +208,12 @@ add claude mcp http://{your-project-address}/mcp
 
 ### 5. 多模型适配（LLM）
 
-基于 OpenAI 兼容 API 的统一 HTTP 客户端，一套代码适配多家大模型供应商。当前支持普通对话、简单流式对话，以及发送工具定义并解析模型返回的 Tool Calls。
+基于 OpenAI 兼容 API 的统一 HTTP 客户端，一套代码适配多家大模型供应商。当前支持普通对话、简单流式对话、Tool Calls 解析，以及基于已注册 `@EasyTool` 的自动工具调用闭环。
+
+| 组件 | 说明 |
+|------|------|
+| `LlmService` | 底层大模型对话服务，支持普通对话、流式对话和手动传入工具定义 |
+| `AgentLlmService` | Agent 编排服务，自动读取 `ToolRegistry` 中的工具、调用模型、执行工具并继续对话 |
 
 **简化配置（推荐）：**
 
@@ -536,15 +541,20 @@ easy-agent/
 ```java
     // 基本LLM对话能力
     @GetMapping("chat-message")
-    public ChatResponse chatMessage(@RequestParam String query) {
-        ChatMessage userMessage = new ChatMessage(ChatMessage.Role.USER, query);
-        ChatMessage systemMessage = new ChatMessage(ChatMessage.Role.SYSTEM, query);
-        List<ChatMessage> chatMessage = List.of(systemMessage, userMessage);
-        ChatResponse chat = llmService.chat(chatMessage);
-        return chat;
-    }
-	// 简单流式对话
-	@GetMapping("/chat/stream")
+	    public ChatResponse chatMessage(@RequestParam String query) {
+	        ChatMessage userMessage = new ChatMessage(ChatMessage.Role.USER, query);
+	        ChatMessage systemMessage = new ChatMessage(ChatMessage.Role.SYSTEM, query);
+	        List<ChatMessage> chatMessage = List.of(systemMessage, userMessage);
+	        ChatResponse chat = llmService.chat(chatMessage);
+	        return chat;
+	    }
+	    // 带 @EasyTool 自动工具调用的 Agent 对话能力
+	    @GetMapping("agent-message")
+	    public ChatResponse agentMessage(@RequestParam String query) {
+	        return agentLlmService.chatWithRegisteredTools(List.of(ChatMessage.user(query)));
+	    }
+		// 简单流式对话
+		@GetMapping("/chat/stream")
 	public ResponseEntity<StreamingResponseBody> chatStream(@RequestParam String message) {
 		StreamingResponseBody stream = outputStream -> {
 			StringBuilder fullResponse = new StringBuilder();

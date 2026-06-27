@@ -9,6 +9,7 @@ import java.util.Map;
 
 public class OpenAiCompatibleApi {
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public record ChatCompletionRequest(
             @JsonProperty("model") String model,
             @JsonProperty("messages") List<ChatMessage> messages,
@@ -23,6 +24,7 @@ public class OpenAiCompatibleApi {
         }
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record ChatMessage(
             @JsonProperty("role") String role,
@@ -47,6 +49,7 @@ public class OpenAiCompatibleApi {
         }
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record ToolDef(
             @JsonProperty("type") String type,
             @JsonProperty("function") FunctionDef function
@@ -56,18 +59,21 @@ public class OpenAiCompatibleApi {
         }
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record FunctionDef(
             @JsonProperty("name") String name,
             @JsonProperty("description") String description,
             @JsonProperty("parameters") Map<String, Object> parameters
     ) {}
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record ToolCall(
             @JsonProperty("id") String id,
             @JsonProperty("type") String type,
             @JsonProperty("function") FunctionCall function
     ) {}
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record FunctionCall(
             @JsonProperty("name") String name,
             @JsonProperty("arguments") String arguments

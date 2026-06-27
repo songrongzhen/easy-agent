@@ -1,7 +1,10 @@
 package io.github.songrongzhen.easyagent.autoconfigure;
 
+import io.github.songrongzhen.easyagent.core.executor.ToolExecutor;
+import io.github.songrongzhen.easyagent.core.registry.ToolRegistry;
 import io.github.songrongzhen.easyagent.llm.config.EasyAgentLlmProperties;
 import io.github.songrongzhen.easyagent.llm.provider.LlmServiceFactory;
+import io.github.songrongzhen.easyagent.llm.service.AgentLlmService;
 import io.github.songrongzhen.easyagent.llm.service.LlmService;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -20,5 +23,13 @@ public class EasyAgentLlmAutoConfiguration {
     @ConditionalOnMissingBean(LlmService.class)
     public LlmService llmService(EasyAgentLlmProperties properties) {
         return LlmServiceFactory.create(properties);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public AgentLlmService agentLlmService(LlmService llmService,
+                                           ToolRegistry toolRegistry,
+                                           ToolExecutor toolExecutor) {
+        return new AgentLlmService(llmService, toolRegistry, toolExecutor);
     }
 }
