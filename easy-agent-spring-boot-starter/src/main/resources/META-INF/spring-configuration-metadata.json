@@ -37,7 +37,67 @@
       "name": "easy-agent.rag.storage-type",
       "type": "io.github.songrongzhen.easyagent.rag.config.EasyAgentRagProperties$StorageType",
       "defaultValue": "AUTO",
-      "description": "Vector store type: AUTO, PGVECTOR, PDF, IN_MEMORY"
+      "description": "Vector store type: AUTO, PGVECTOR, IN_MEMORY. Current auto-configuration uses in-memory storage."
+    },
+    {
+      "name": "easy-agent.rag.search.strategy",
+      "type": "io.github.songrongzhen.easyagent.rag.config.EasyAgentRagProperties$SearchStrategyType",
+      "defaultValue": "AUTO",
+      "description": "Search strategy: AUTO, EMBEDDING, COSINE, TF_IDF"
+    },
+    {
+      "name": "easy-agent.rag.search.embedding.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "Enable embedding search when an EmbeddingModel bean is available"
+    },
+    {
+      "name": "easy-agent.rag.search.embedding.provider",
+      "type": "io.github.songrongzhen.easyagent.rag.config.EasyAgentRagProperties$Embedding$EmbeddingProvider",
+      "defaultValue": "AUTO",
+      "description": "Reserved embedding provider setting"
+    },
+    {
+      "name": "easy-agent.rag.search.embedding.model",
+      "type": "java.lang.String",
+      "defaultValue": "text-embedding-v3",
+      "description": "Embedding model name setting"
+    },
+    {
+      "name": "easy-agent.rag.search.embedding.min-similarity",
+      "type": "java.lang.Double",
+      "defaultValue": 0.3,
+      "description": "Minimum similarity for embedding search results"
+    },
+    {
+      "name": "easy-agent.rag.search.cosine.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "Enable cosine keyword-vector search fallback"
+    },
+    {
+      "name": "easy-agent.rag.search.cosine.min-similarity",
+      "type": "java.lang.Double",
+      "defaultValue": 0.1,
+      "description": "Minimum similarity for cosine search results"
+    },
+    {
+      "name": "easy-agent.rag.search.tf-idf.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "Enable TF-IDF search fallback"
+    },
+    {
+      "name": "easy-agent.rag.search.tf-idf.min-score",
+      "type": "java.lang.Double",
+      "defaultValue": 0.1,
+      "description": "Minimum score for TF-IDF search results"
+    },
+    {
+      "name": "easy-agent.rag.pdf.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "Enable PDF document loading"
     },
     {
       "name": "easy-agent.rag.pdf.resource-path",
@@ -46,16 +106,46 @@
       "description": "Path to PDF knowledge base files"
     },
     {
+      "name": "easy-agent.rag.pdf.chunk-size",
+      "type": "java.lang.Integer",
+      "defaultValue": 1000,
+      "description": "PDF text chunk size"
+    },
+    {
+      "name": "easy-agent.rag.pdf.chunk-overlap",
+      "type": "java.lang.Integer",
+      "defaultValue": 200,
+      "description": "PDF text chunk overlap"
+    },
+    {
+      "name": "easy-agent.rag.excel.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "Enable Excel document loading"
+    },
+    {
+      "name": "easy-agent.rag.excel.resource-path",
+      "type": "java.lang.String",
+      "defaultValue": "classpath:knowledge/",
+      "description": "Path to Excel knowledge base files"
+    },
+    {
       "name": "easy-agent.mcp.enabled",
       "type": "java.lang.Boolean",
       "defaultValue": true,
       "description": "Enable MCP module"
     },
     {
-      "name": "easy-agent.mcp.sse-endpoint",
+      "name": "easy-agent.mcp.server-name",
       "type": "java.lang.String",
-      "defaultValue": "/mcp/sse",
-      "description": "MCP SSE endpoint path"
+      "defaultValue": "easy-agent-mcp-server",
+      "description": "MCP server name returned during initialize"
+    },
+    {
+      "name": "easy-agent.mcp.server-version",
+      "type": "java.lang.String",
+      "defaultValue": "0.1.0",
+      "description": "MCP server version returned during initialize"
     },
     {
       "name": "easy-agent.skill.enabled",
@@ -64,16 +154,10 @@
       "description": "Enable Skill module"
     },
     {
-      "name": "easy-agent.skill.skill-path",
+      "name": "easy-agent.skill.skill-output-path",
       "type": "java.lang.String",
-      "defaultValue": "classpath:skills/",
-      "description": "Path to SKILL.md files"
-    },
-    {
-      "name": "easy-agent.skill.hot-reload",
-      "type": "java.lang.Boolean",
-      "defaultValue": true,
-      "description": "Enable hot-reload for SKILL.md files"
+      "defaultValue": ".",
+      "description": "Base directory for generated SKILL.md files. Files are written under the skill/ subdirectory."
     },
     {
       "name": "easy-agent.llm.enabled",
@@ -84,8 +168,18 @@
     {
       "name": "easy-agent.llm.provider",
       "type": "io.github.songrongzhen.easyagent.llm.config.EasyAgentLlmProperties$LlmProvider",
-      "defaultValue": "NONE",
-      "description": "LLM provider: NONE, DASHSCOPE, DEEPSEEK, OLLAMA, OPENAI"
+      "defaultValue": "AUTO",
+      "description": "LLM provider: AUTO, NONE, DASHSCOPE, DEEPSEEK, OLLAMA, OPENAI"
+    },
+    {
+      "name": "easy-agent.llm.model",
+      "type": "java.lang.String",
+      "description": "Top-level model name. Used before provider-specific model settings."
+    },
+    {
+      "name": "easy-agent.llm.api-key",
+      "type": "java.lang.String",
+      "description": "Top-level API key. Used before provider-specific API key settings."
     },
     {
       "name": "easy-agent.llm.dash-scope.api-key",
@@ -93,15 +187,80 @@
       "description": "DashScope API key"
     },
     {
+      "name": "easy-agent.llm.dash-scope.model",
+      "type": "java.lang.String",
+      "defaultValue": "qwen-max",
+      "description": "DashScope model name"
+    },
+    {
+      "name": "easy-agent.llm.dash-scope.base-url",
+      "type": "java.lang.String",
+      "defaultValue": "https://dashscope.aliyuncs.com/compatible-mode",
+      "description": "DashScope OpenAI-compatible base URL"
+    },
+    {
       "name": "easy-agent.llm.deep-seek.api-key",
       "type": "java.lang.String",
       "description": "DeepSeek API key"
+    },
+    {
+      "name": "easy-agent.llm.deep-seek.model",
+      "type": "java.lang.String",
+      "defaultValue": "deepseek-chat",
+      "description": "DeepSeek model name"
+    },
+    {
+      "name": "easy-agent.llm.deep-seek.base-url",
+      "type": "java.lang.String",
+      "defaultValue": "https://api.deepseek.com",
+      "description": "DeepSeek OpenAI-compatible base URL"
     },
     {
       "name": "easy-agent.llm.ollama.base-url",
       "type": "java.lang.String",
       "defaultValue": "http://localhost:11434",
       "description": "Ollama base URL"
+    },
+    {
+      "name": "easy-agent.llm.ollama.model",
+      "type": "java.lang.String",
+      "defaultValue": "llama3",
+      "description": "Ollama model name"
+    },
+    {
+      "name": "easy-agent.llm.open-ai.api-key",
+      "type": "java.lang.String",
+      "description": "OpenAI API key"
+    },
+    {
+      "name": "easy-agent.llm.open-ai.model",
+      "type": "java.lang.String",
+      "defaultValue": "gpt-4o",
+      "description": "OpenAI model name"
+    },
+    {
+      "name": "easy-agent.llm.open-ai.base-url",
+      "type": "java.lang.String",
+      "defaultValue": "https://api.openai.com",
+      "description": "OpenAI base URL"
+    },
+    {
+      "name": "easy-agent.llm.chat-options.temperature",
+      "type": "java.lang.Double",
+      "defaultValue": 0.7,
+      "description": "LLM chat temperature"
+    },
+    {
+      "name": "easy-agent.llm.chat-options.top-p",
+      "type": "java.lang.Double",
+      "defaultValue": 1.0,
+      "description": "LLM chat top-p"
+    },
+    {
+      "name": "easy-agent.llm.chat-options.max-tokens",
+      "type": "java.lang.Integer",
+      "defaultValue": 4096,
+      "description": "LLM chat max tokens"
     }
   ]
 }
