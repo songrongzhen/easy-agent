@@ -288,7 +288,31 @@ easy-agent:
 easy-agent:
   # MCP 配置（可选）
   mcp:
+    # 是否启用 MCP HTTP 工具服务
     enabled: true
+    # MCP 初始化握手时返回的服务名称
+    server-name: easy-agent-mcp-server
+    # MCP 初始化握手时返回的服务版本
+    server-version: 0.1.0
+    # MCP 接口跨域配置，仅作用于 /mcp/** 路径（CORS 配置可以不写，默认开启本地跨域。）
+    cors:
+      # 是否启用 MCP CORS 过滤器
+      enabled: true
+      # 允许访问 MCP 接口的来源，支持 Spring 的 origin pattern
+      allowed-origin-patterns:
+        - http://localhost:*
+        - http://127.0.0.1:*
+      # 允许的请求头
+      allowed-headers:
+        - "*"
+      # 允许的 HTTP 方法
+      allowed-methods:
+        - GET
+        - POST
+        - OPTIONS
+      # 允许浏览器读取的响应头
+      exposed-headers:
+        - Content-Type
 
   llm:
     enabled: true
@@ -377,7 +401,31 @@ server:
 easy-agent:
   # MCP 配置
   mcp:
+    # 是否启用 MCP HTTP 工具服务
     enabled: true
+    # MCP 初始化握手时返回的服务名称
+    server-name: easy-agent-mcp-server
+    # MCP 初始化握手时返回的服务版本
+    server-version: 0.1.0
+    # MCP 接口跨域配置，仅作用于 /mcp/** 路径 （CORS 配置可以不写，默认开启本地跨域。）
+    cors:
+      # 是否启用 MCP CORS 过滤器
+      enabled: true
+      # 允许访问 MCP 接口的来源，支持 Spring 的 origin pattern
+      allowed-origin-patterns:
+        - http://localhost:*
+        - http://127.0.0.1:*
+      # 允许的请求头
+      allowed-headers:
+        - "*"
+      # 允许的 HTTP 方法
+      allowed-methods:
+        - GET
+        - POST
+        - OPTIONS
+      # 允许浏览器读取的响应头
+      exposed-headers:
+        - Content-Type
   llm:
     enabled: true
     model: "qwen-plus"

@@ -148,6 +148,52 @@
       "description": "MCP server version returned during initialize"
     },
     {
+      "name": "easy-agent.mcp.cors.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "Enable CORS filter for /mcp/** endpoints"
+    },
+    {
+      "name": "easy-agent.mcp.cors.allowed-origin-patterns",
+      "type": "java.util.List<java.lang.String>",
+      "defaultValue": [
+        "http://localhost:*",
+        "http://127.0.0.1:*"
+      ],
+      "description": "Allowed origin patterns for MCP CORS"
+    },
+    {
+      "name": "easy-agent.mcp.cors.allowed-headers",
+      "type": "java.util.List<java.lang.String>",
+      "defaultValue": [
+        "*"
+      ],
+      "description": "Allowed headers for MCP CORS"
+    },
+    {
+      "name": "easy-agent.mcp.cors.allowed-methods",
+      "type": "java.util.List<java.lang.String>",
+      "defaultValue": [
+        "GET",
+        "POST",
+        "OPTIONS"
+      ],
+      "description": "Allowed methods for MCP CORS"
+    },
+    {
+      "name": "easy-agent.mcp.cors.exposed-headers",
+      "type": "java.util.List<java.lang.String>",
+      "defaultValue": [
+        "Content-Type"
+      ],
+      "description": "Exposed headers for MCP CORS"
+    },
+    {
+      "name": "easy-agent.mcp.cors.allow-credentials",
+      "type": "java.lang.Boolean",
+      "description": "Whether MCP CORS allows credentials"
+    },
+    {
       "name": "easy-agent.skill.enabled",
       "type": "java.lang.Boolean",
       "defaultValue": true,

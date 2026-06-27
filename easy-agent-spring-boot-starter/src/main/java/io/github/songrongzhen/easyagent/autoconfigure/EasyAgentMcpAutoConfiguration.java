@@ -3,6 +3,7 @@ package io.github.songrongzhen.easyagent.autoconfigure;
 import io.github.songrongzhen.easyagent.core.executor.ToolExecutor;
 import io.github.songrongzhen.easyagent.core.registry.ToolRegistry;
 import io.github.songrongzhen.easyagent.mcp.config.EasyAgentMcpProperties;
+import io.github.songrongzhen.easyagent.mcp.config.McpCorsConfig;
 import io.github.songrongzhen.easyagent.mcp.server.EasyAgentMcpServer;
 import io.github.songrongzhen.easyagent.skill.service.SkillGeneratorService;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -12,6 +13,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.lang.Nullable;
 
 @AutoConfiguration
@@ -19,6 +21,7 @@ import org.springframework.lang.Nullable;
 @ConditionalOnWebApplication
 @ConditionalOnProperty(prefix = "easy-agent.mcp", name = "enabled", havingValue = "true", matchIfMissing = false)
 @EnableConfigurationProperties(EasyAgentMcpProperties.class)
+@Import(McpCorsConfig.class)
 public class EasyAgentMcpAutoConfiguration {
 
     @Bean

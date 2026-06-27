@@ -32,10 +32,17 @@ public class EasyAgentMcpServer {
     }
 
     public McpProtocol.JsonRpcResponse handleRequest(McpProtocol.JsonRpcRequest request) {
+        if (request == null) {
+            return McpProtocol.JsonRpcResponse.error(null, McpProtocol.INVALID_REQUEST, "Invalid request: request body is required");
+        }
+        if (request.method() == null || request.method().isBlank()) {
+            return McpProtocol.JsonRpcResponse.error(request.id(), McpProtocol.INVALID_REQUEST, "Invalid request: method is required");
+        }
+
         try {
             Object result = switch (request.method()) {
                 case "initialize" -> handleInitialize(request);
-                case "notifications/initialized" -> null;
+                case "notifications/initialized" -> handleInitializedNotification();
                 case "tools/list" -> handleToolsList();
                 case "tools/call" -> handleToolsCall(request);
                 case "resources/list" -> handleResourcesList();
@@ -66,6 +73,11 @@ public class EasyAgentMcpServer {
         );
     }
 
+    private Map<String, Object> handleInitializedNotification() {
+        log.debug("MCP client initialized");
+        return Map.of();
+    }
+
     private McpProtocol.ListToolsResult handleToolsList() {
         List<McpProtocol.Tool> tools = new ArrayList<>(mcpToolAdapter.convertToMcpTools());
         if (skillMcpAdapter != null) {
@@ -83,13 +95,30 @@ public class EasyAgentMcpServer {
             );
         }
         
-        String toolName = (String) params.get("name");
+        Object nameObj = params.get("name");
+        if (!(nameObj instanceof String toolName)) {
+            return new McpProtocol.CallToolResult(
+                    List.of(McpProtocol.Content.text("Error: tool name must be a string")),
+                    true
+            );
+        }
         if (toolName == null || toolName.isEmpty()) {
             return new McpProtocol.CallToolResult(
                     List.of(McpProtocol.Content.text("Error: tool name is required")),
                     true
             );
         }
+
+        Object argumentsObj = params.get("arguments");
+        if (argumentsObj != null && !(argumentsObj instanceof Map<?, ?>)) {
+            return new McpProtocol.CallToolResult(
+                    List.of(McpProtocol.Content.text("Error: arguments must be an object")),
+                    true
+            );
+        }
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> arguments = argumentsObj instanceof Map<?, ?> ? (Map<String, Object>) argumentsObj : Map.of();
         
         if (toolName.startsWith("skill.")) {
             if (skillMcpAdapter == null) {
@@ -99,13 +128,9 @@ public class EasyAgentMcpServer {
                 );
             }
             log.info("MCP skill tool call: {}", toolName);
-            @SuppressWarnings("unchecked")
-            Map<String, Object> arguments = (Map<String, Object>) params.get("arguments");
             return skillMcpAdapter.executeSkillTool(toolName, arguments);
         }
         
-        @SuppressWarnings("unchecked")
-        Map<String, Object> arguments = (Map<String, Object>) params.get("arguments");
         log.info("MCP tool call: {}", toolName);
         return mcpToolAdapter.executeMcpTool(toolName, arguments);
     }

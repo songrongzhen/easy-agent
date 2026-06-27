@@ -91,19 +91,29 @@ public class SkillMcpAdapter {
 
     @SuppressWarnings("unchecked")
     private McpProtocol.CallToolResult handleGenerateSkill(Map<String, Object> arguments) throws IOException {
-        String name = (String) arguments.get("name");
-        String description = (String) arguments.get("description");
-        String boundary = (String) arguments.get("boundary");
-        String example = (String) arguments.get("example");
+        if (arguments == null) {
+            return error("Error: arguments are required");
+        }
+
+        String name = getRequiredString(arguments, "name");
+        String description = getRequiredString(arguments, "description");
+        String boundary = getRequiredString(arguments, "boundary");
+        String example = getRequiredString(arguments, "example");
+        if (name == null || description == null || boundary == null || example == null) {
+            return error("Error: name, description, boundary and example must be non-empty strings");
+        }
         
         List<String> selectedTools;
         Object toolsObj = arguments.get("selectedTools");
-        if (toolsObj instanceof List) {
-            selectedTools = (List<String>) toolsObj;
+        if (toolsObj instanceof List<?> toolsList) {
+            if (!toolsList.stream().allMatch(String.class::isInstance)) {
+                return error("Error: selectedTools must be an array of strings");
+            }
+            selectedTools = (List<String>) toolsList;
         } else if (toolsObj instanceof String) {
             selectedTools = List.of((String) toolsObj);
         } else {
-            selectedTools = List.of();
+            return error("Error: selectedTools must be an array of strings");
         }
 
         SkillGeneratorService.SkillInput input = new SkillGeneratorService.SkillInput(
@@ -115,6 +125,21 @@ public class SkillMcpAdapter {
         return new McpProtocol.CallToolResult(
                 List.of(McpProtocol.Content.text("Skill 文件已生成到 skill/" + name + ".md")),
                 false
+        );
+    }
+
+    private String getRequiredString(Map<String, Object> arguments, String key) {
+        Object value = arguments.get(key);
+        if (!(value instanceof String text) || text.isBlank()) {
+            return null;
+        }
+        return text;
+    }
+
+    private McpProtocol.CallToolResult error(String message) {
+        return new McpProtocol.CallToolResult(
+                List.of(McpProtocol.Content.text(message)),
+                true
         );
     }
 }
