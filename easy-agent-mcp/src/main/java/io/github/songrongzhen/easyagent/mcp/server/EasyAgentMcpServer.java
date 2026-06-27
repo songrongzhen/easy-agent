@@ -51,6 +51,9 @@ public class EasyAgentMcpServer {
                 default -> throw new UnsupportedOperationException("Method not found: " + request.method());
             };
             return McpProtocol.JsonRpcResponse.success(request.id(), result);
+        } catch (McpRequestException e) {
+            log.warn("Invalid MCP request: method={}, message={}", request.method(), e.getMessage());
+            return McpProtocol.JsonRpcResponse.error(request.id(), e.getCode(), e.getMessage());
         } catch (UnsupportedOperationException e) {
             log.error("Method not found: {}", request.method(), e);
             return McpProtocol.JsonRpcResponse.error(request.id(), McpProtocol.METHOD_NOT_FOUND, e.getMessage());
@@ -61,9 +64,10 @@ public class EasyAgentMcpServer {
     }
 
     private McpProtocol.InitializeResult handleInitialize(McpProtocol.JsonRpcRequest request) {
-        log.info("MCP client initializing");
+        String protocolVersion = resolveProtocolVersion(request.params());
+        log.info("MCP client initializing with protocolVersion={}", protocolVersion);
         return new McpProtocol.InitializeResult(
-                McpProtocol.LATEST_PROTOCOL_VERSION,
+                protocolVersion,
                 new McpProtocol.ServerCapabilities(
                         new McpProtocol.ToolCapabilities(false),
                         null,
@@ -71,6 +75,26 @@ public class EasyAgentMcpServer {
                 ),
                 new McpProtocol.Implementation(properties.getServerName(), properties.getServerVersion())
         );
+    }
+
+    private String resolveProtocolVersion(Map<String, Object> params) {
+        if (params == null || !params.containsKey("protocolVersion")) {
+            return McpProtocol.LATEST_PROTOCOL_VERSION;
+        }
+
+        Object protocolVersionObj = params.get("protocolVersion");
+        if (protocolVersionObj == null) {
+            return McpProtocol.LATEST_PROTOCOL_VERSION;
+        }
+        if (!(protocolVersionObj instanceof String requestedVersion) || requestedVersion.isBlank()) {
+            throw new McpRequestException(McpProtocol.INVALID_PARAMS, "Invalid protocolVersion: must be a string");
+        }
+        if (!McpProtocol.SUPPORTED_PROTOCOL_VERSIONS.contains(requestedVersion)) {
+            throw new McpRequestException(McpProtocol.INVALID_PARAMS,
+                    "Unsupported protocolVersion: " + requestedVersion
+                            + ", supported versions: " + McpProtocol.SUPPORTED_PROTOCOL_VERSIONS);
+        }
+        return requestedVersion;
     }
 
     private Map<String, Object> handleInitializedNotification() {
@@ -151,6 +175,19 @@ public class EasyAgentMcpServer {
         log.info("Easy Agent MCP Server started - {} tools available", tools.size());
         for (McpProtocol.Tool tool : tools) {
             log.info("  MCP Tool: {} - {}", tool.name(), tool.description());
+        }
+    }
+
+    private static class McpRequestException extends RuntimeException {
+        private final int code;
+
+        private McpRequestException(int code, String message) {
+            super(message);
+            this.code = code;
+        }
+
+        private int getCode() {
+            return code;
         }
     }
 }

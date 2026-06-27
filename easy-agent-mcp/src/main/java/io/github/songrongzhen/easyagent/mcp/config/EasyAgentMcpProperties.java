@@ -12,7 +12,7 @@ public class EasyAgentMcpProperties {
 
     private String serverName = "easy-agent-mcp-server";
 
-    private String serverVersion = "0.1.0";
+    private String serverVersion = "0.1.6";
 
     private Cors cors = new Cors();
 

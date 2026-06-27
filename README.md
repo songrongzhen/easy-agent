@@ -169,6 +169,8 @@ public class KnowledgeService {
 
 实现了轻量 MCP（Model Context Protocol）HTTP 服务端，未配置 LLM 时也可仅提供 MCP 能力，让 Claude Code 等 MCP 客户端直接调用 `@EasyTool` 注册的工具。
 
+当前 MCP 模块是基础工具型服务端，默认协议版本为 `2025-11-25`，并兼容 `2024-11-05`。`initialize` 时客户端未传 `protocolVersion` 会默认使用 `2025-11-25`；传入 `2025-11-25` 或 `2024-11-05` 会按客户端版本返回；传入其他版本会返回 JSON-RPC `INVALID_PARAMS`。
+
 **协议实现：**
 
 | 方法 | 说明 |
@@ -293,7 +295,7 @@ easy-agent:
     # MCP 初始化握手时返回的服务名称
     server-name: easy-agent-mcp-server
     # MCP 初始化握手时返回的服务版本
-    server-version: 0.1.0
+    server-version: 0.1.6
     # MCP 接口跨域配置，仅作用于 /mcp/** 路径（CORS 配置可以不写，默认开启本地跨域。）
     cors:
       # 是否启用 MCP CORS 过滤器
@@ -406,7 +408,7 @@ easy-agent:
     # MCP 初始化握手时返回的服务名称
     server-name: easy-agent-mcp-server
     # MCP 初始化握手时返回的服务版本
-    server-version: 0.1.0
+    server-version: 0.1.6
     # MCP 接口跨域配置，仅作用于 /mcp/** 路径 （CORS 配置可以不写，默认开启本地跨域。）
     cors:
       # 是否启用 MCP CORS 过滤器

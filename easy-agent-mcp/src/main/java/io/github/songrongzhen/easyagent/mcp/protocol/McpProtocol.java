@@ -9,7 +9,11 @@ import java.util.Map;
 public class McpProtocol {
 
     public static final String JSONRPC_VERSION = "2.0";
-    public static final String LATEST_PROTOCOL_VERSION = "2024-11-05";
+    public static final String LATEST_PROTOCOL_VERSION = "2025-11-25";
+    public static final List<String> SUPPORTED_PROTOCOL_VERSIONS = List.of(
+            LATEST_PROTOCOL_VERSION,
+            "2024-11-05"
+    );
 
     public static final int PARSE_ERROR = -32700;
     public static final int INVALID_REQUEST = -32600;
