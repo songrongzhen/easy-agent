@@ -120,7 +120,7 @@ Skill 模块当前提供的是业务 Skill Markdown 文件生成能力：通过 
 | `SkillMcpAdapter` | 将 Skill 生成能力暴露为 MCP 工具 |
 | `create-skill.md` | 内置元技能说明文档，引导客户端如何生成 Skill |
 
-生成文件默认写入项目根目录下的 `skill/{name}.md`，可通过 `easy-agent.skill.skill-output-path` 调整根目录。同名文件已存在时，MCP 客户端会提示使用者选择生成副本或覆盖。
+生成文件默认写入项目根目录下的 `skill/{name}.md`，可通过 `easy-agent.skill.skill-output-path` 调整根目录。同名文件已存在时，MCP 客户端会询问使用者选择生成副本或覆盖。
 
 > 当前版本不包含 Skill 文件解析、运行时加载、注册中心或文件热更新能力。
 
@@ -345,7 +345,7 @@ easy-agent:
     # 是否启用 RAG 功能
     enabled: true
     # 向量存储类型：AUTO、IN_MEMORY、PGVECTOR
-    # AUTO 和 IN_MEMORY 使用内存存储
+    # AUTO 和 IN_MEMORY 使用内存存储；PGVECTOR 当前为占位 Provider，暂不可用于实际检索
     storage-type: IN_MEMORY
     search:
       # 搜索策略：AUTO（Embedding -> Cosine -> TF-IDF 降级）、EMBEDDING、COSINE、TF_IDF
@@ -360,7 +360,7 @@ easy-agent:
       cosine:
         # 是否启用余弦相似度搜索（作为 Embedding 的降级方案）
         enabled: true
-      tfidf:
+      tfIdf:
         # 是否启用 TF-IDF 搜索（兜底方案，不需要外部服务）
         enabled: true
     pdf:
@@ -377,16 +377,14 @@ easy-agent:
       enabled: true
       # Excel 文件所在目录（支持 classpath: 前缀）
       resource-path: classpath:knowledge/
+    # 说明：pdf.enabled 和 excel.enabled 同时影响启动加载和运行时 addDocument 支持的文件类型
 
-# 说明：pdf.enabled 和 excel.enabled 同时影响启动加载和运行时 addDocument 支持的文件类型。
-
-  # Skill 配置（可选）
+  # Skill 配置（可选；不配置时默认启用，并在项目根目录下生成 /skill/）
   skill:
+    # 是否启用业务 Skill Markdown 文件生成能力，默认 true
     enabled: true
-    # 在项目的根目录下生成 /skill/
+    # 生成目录的根路径，默认 .；最终文件写入 ${skill-output-path}/skill/
     skill-output-path: .
-    # 同名 Skill 文件已存在时询问使用者生成副本还是覆盖
-    file-exists-strategy: ASK
 ```
 
 ### 3. 定义工具
@@ -465,7 +463,7 @@ easy-agent:
     # 是否启用 RAG 功能
     enabled: true
     # 向量存储类型：AUTO、IN_MEMORY、PGVECTOR
-    # AUTO 和 IN_MEMORY 使用内存存储
+    # AUTO 和 IN_MEMORY 使用内存存储；PGVECTOR 当前为占位 Provider，暂不可用于实际检索
     storage-type: IN_MEMORY
     search:
       # 搜索策略：AUTO（Embedding -> Cosine -> TF-IDF 降级）、EMBEDDING、COSINE、TF_IDF
@@ -480,7 +478,7 @@ easy-agent:
       cosine:
         # 是否启用余弦相似度搜索（作为 Embedding 的降级方案）
         enabled: true
-      tfidf:
+      tfIdf:
         # 是否启用 TF-IDF 搜索（兜底方案，不需要外部服务）
         enabled: true
     pdf:
@@ -497,14 +495,13 @@ easy-agent:
       enabled: true
       # Excel 文件所在目录（支持 classpath: 前缀）
       resource-path: classpath:knowledge/
-# 说明：pdf.enabled 和 excel.enabled 同时影响启动加载和运行时 addDocument 支持的文件类型。
-  # Skill 配置（可选）
+    # 说明：pdf.enabled 和 excel.enabled 同时影响启动加载和运行时 addDocument 支持的文件类型
+  # Skill 配置（可选；不配置时默认启用，并在项目根目录下生成 /skill/）
   skill:
+    # 是否启用业务 Skill Markdown 文件生成能力，默认 true
     enabled: true
-    # 在项目的根目录下生成 /skill/
+    # 生成目录的根路径，默认 .；最终文件写入 ${skill-output-path}/skill/
     skill-output-path: .
-    # 同名 Skill 文件已存在时询问使用者生成副本还是覆盖
-    file-exists-strategy: ASK
 # 日志配置
 logging:
   level:

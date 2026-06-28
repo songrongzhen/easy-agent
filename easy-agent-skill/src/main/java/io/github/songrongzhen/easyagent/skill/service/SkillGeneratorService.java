@@ -42,6 +42,16 @@ public class SkillGeneratorService {
         ) {}
     }
 
+    public enum FileExistsStrategy {
+        ASK,
+        COPY,
+        OVERWRITE,
+        ERROR
+    }
+
+    /**
+     * 获取当前可用工具列表。
+     */
     public List<ToolInfo> getAllAvailableTools() {
         Collection<ToolDefinition> tools = toolRegistry.getEnabledTools();
         return tools.stream()
@@ -60,6 +70,9 @@ public class SkillGeneratorService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 获取面向使用者展示的工具列表文本。
+     */
     public String getToolListForUser() {
         List<ToolInfo> tools = getAllAvailableTools();
         if (tools.isEmpty()) {
@@ -88,11 +101,17 @@ public class SkillGeneratorService {
         return sb.toString();
     }
 
+    /**
+     * 生成业务 Skill Markdown 文件。
+     */
     public void generateSkill(SkillInput input) throws IOException {
         generateSkill(input, null);
     }
 
-    public void generateSkill(SkillInput input, EasyAgentSkillProperties.FileExistsStrategy fileExistsStrategy) throws IOException {
+    /**
+     * 按同名文件处理策略生成业务 Skill Markdown 文件。
+     */
+    public void generateSkill(SkillInput input, FileExistsStrategy fileExistsStrategy) throws IOException {
         validateSkillInput(input);
         String outputPath = properties.getSkillOutputPath();
         Path skillDir = Paths.get(outputPath, "skill").toAbsolutePath().normalize();
@@ -106,13 +125,16 @@ public class SkillGeneratorService {
         if (!path.startsWith(skillDir)) {
             throw new IllegalArgumentException("Skill file path is outside of skill output directory");
         }
-        path = resolveTargetPath(path, fileExistsStrategy != null ? fileExistsStrategy : properties.getFileExistsStrategy());
+        path = resolveTargetPath(path, fileExistsStrategy != null ? fileExistsStrategy : FileExistsStrategy.ASK);
         String content = buildSkillMarkdown(input);
         Files.writeString(path, content);
         
         log.info("Generated skill file: {}", path.toAbsolutePath());
     }
 
+    /**
+     * 生成业务 Skill Markdown 文件。
+     */
     public void generateSkill(String name, String description, String boundary, 
                               List<String> selectedTools, String example, String author) throws IOException {
         generateSkill(new SkillInput(name, description, boundary, selectedTools, example, author));
@@ -209,7 +231,7 @@ public class SkillGeneratorService {
         return sanitized;
     }
 
-    private Path resolveTargetPath(Path path, EasyAgentSkillProperties.FileExistsStrategy strategy) throws IOException {
+    private Path resolveTargetPath(Path path, FileExistsStrategy strategy) throws IOException {
         if (!Files.exists(path)) {
             return path;
         }

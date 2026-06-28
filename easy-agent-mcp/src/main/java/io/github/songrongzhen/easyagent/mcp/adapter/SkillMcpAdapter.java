@@ -2,7 +2,6 @@ package io.github.songrongzhen.easyagent.mcp.adapter;
 
 import io.github.songrongzhen.easyagent.mcp.protocol.McpProtocol;
 
-import io.github.songrongzhen.easyagent.skill.config.EasyAgentSkillProperties;
 import io.github.songrongzhen.easyagent.skill.service.SkillGeneratorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -118,7 +117,7 @@ public class SkillMcpAdapter {
             return error("Error: selectedTools must be an array of strings");
         }
 
-        EasyAgentSkillProperties.FileExistsStrategy fileExistsStrategy = resolveFileExistsStrategy(arguments.get("fileExistsStrategy"));
+        SkillGeneratorService.FileExistsStrategy fileExistsStrategy = resolveFileExistsStrategy(arguments.get("fileExistsStrategy"));
         SkillGeneratorService.SkillInput input = new SkillGeneratorService.SkillInput(name, description, boundary, selectedTools, example, null);
         
         try {
@@ -142,7 +141,7 @@ public class SkillMcpAdapter {
         return text;
     }
 
-    private EasyAgentSkillProperties.FileExistsStrategy resolveFileExistsStrategy(Object value) {
+    private SkillGeneratorService.FileExistsStrategy resolveFileExistsStrategy(Object value) {
         if (value == null) {
             return null;
         }
@@ -150,8 +149,8 @@ public class SkillMcpAdapter {
             throw new IllegalArgumentException("fileExistsStrategy must be copy or overwrite");
         }
         return switch (text.trim().toLowerCase()) {
-            case "copy" -> EasyAgentSkillProperties.FileExistsStrategy.COPY;
-            case "overwrite" -> EasyAgentSkillProperties.FileExistsStrategy.OVERWRITE;
+            case "copy" -> SkillGeneratorService.FileExistsStrategy.COPY;
+            case "overwrite" -> SkillGeneratorService.FileExistsStrategy.OVERWRITE;
             default -> throw new IllegalArgumentException("fileExistsStrategy must be copy or overwrite");
         };
     }
