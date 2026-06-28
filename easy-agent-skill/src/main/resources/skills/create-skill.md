@@ -1,7 +1,7 @@
 <!--
 name: skill-generator
 version: 1.0.0
-description: 帮助用户创建属于自己的 SKILL.md 文件，引导式生成技能定义
+description: 帮助用户创建属于自己的业务 Skill Markdown 文件，引导式生成技能定义
 author: easy-agent
 tags: skill生成器,元技能,工具生成
 -->
@@ -10,7 +10,7 @@ tags: skill生成器,元技能,工具生成
 
 ## 简介
 
-这是一个帮助用户创建属于自己的 SKILL.md 文件的元技能。
+这是一个帮助用户创建属于自己的业务 Skill Markdown 文件的元技能。
 
 当用户想要定义一个自定义技能时，可以通过这个工具引导式生成完整的技能定义文件。
 
@@ -38,23 +38,28 @@ tags: skill生成器,元技能,工具生成
 
 ### 第四步：列出可用工具
 
-请调用 `getAvailableTools` 获取用户项目中所有可用的 @EasyTool 工具，然后询问用户：
+请调用 `skill.list_tools` 获取用户项目中所有可用的 @EasyTool 工具，然后询问用户：
 "这个 Skill 需要调用哪些工具？请从以下列表中选择："
 
 ### 第五步：询问使用示例
 
 请询问用户："请提供一个使用示例，展示如何调用这个 Skill？"
 
-### 第六步：生成 SKILL.md
+### 第六步：生成业务 Skill Markdown 文件
 
-收集完以上信息后，调用 `generateSkill` 工具生成 SKILL.md 文件。
+收集完以上信息后，调用 `skill.generate` 工具生成业务 Skill Markdown 文件。
+
+如果 `skill.generate` 返回同名文件已存在，请询问用户："同名 Skill 文件已存在，要生成副本还是覆盖？"
+
+- 用户选择生成副本时，重新调用 `skill.generate` 并传入 `fileExistsStrategy=copy`
+- 用户选择覆盖时，重新调用 `skill.generate` 并传入 `fileExistsStrategy=overwrite`
 
 ## 可用工具
 
 | 工具名称 | 功能 | 参数 |
 |----------|------|------|
-| getAvailableTools | 获取用户项目中所有 @EasyTool 工具列表 | 无 |
-| generateSkill | 生成 SKILL.md 文件 | name, description, boundary, selectedTools, example, author |
+| skill.list_tools | 获取用户项目中所有 @EasyTool 工具列表 | 无 |
+| skill.generate | 生成业务 Skill Markdown 文件 | name, description, boundary, selectedTools, example, fileExistsStrategy |
 
 ## 示例对话
 
@@ -82,4 +87,4 @@ tags: skill生成器,元技能,工具生成
 
 **用户**：帮我计算 3 + 5
 
-**助手**：好的，我来生成 SKILL.md 文件...
+**助手**：好的，我来生成业务 Skill Markdown 文件...

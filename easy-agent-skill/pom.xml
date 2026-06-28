@@ -12,7 +12,7 @@
 
     <artifactId>easy-agent-skill</artifactId>
     <name>Easy Agent Skill</name>
-    <description>Skill module: Declarative Agent Skill system via SKILL.md, runtime hot-reload</description>
+    <description>Skill module: generate business Skill Markdown files from @EasyTool tools</description>
 
     <dependencies>
         <dependency>

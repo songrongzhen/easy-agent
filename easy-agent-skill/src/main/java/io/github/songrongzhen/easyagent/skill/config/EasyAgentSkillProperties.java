@@ -9,6 +9,15 @@ public class EasyAgentSkillProperties {
 
     private String skillOutputPath = ".";
 
+    private FileExistsStrategy fileExistsStrategy = FileExistsStrategy.ASK;
+
+    public enum FileExistsStrategy {
+        ASK,
+        COPY,
+        OVERWRITE,
+        ERROR
+    }
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -23,5 +32,13 @@ public class EasyAgentSkillProperties {
 
     public void setSkillOutputPath(String skillOutputPath) {
         this.skillOutputPath = skillOutputPath;
+    }
+
+    public FileExistsStrategy getFileExistsStrategy() {
+        return fileExistsStrategy;
+    }
+
+    public void setFileExistsStrategy(FileExistsStrategy fileExistsStrategy) {
+        this.fileExistsStrategy = fileExistsStrategy;
     }
 }

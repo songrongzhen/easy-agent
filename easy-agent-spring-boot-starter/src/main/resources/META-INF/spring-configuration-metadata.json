@@ -203,7 +203,13 @@
       "name": "easy-agent.skill.skill-output-path",
       "type": "java.lang.String",
       "defaultValue": ".",
-      "description": "Base directory for generated SKILL.md files. Files are written under the skill/ subdirectory."
+      "description": "Base directory for generated business Skill Markdown files. Files are written under the skill/ subdirectory."
+    },
+    {
+      "name": "easy-agent.skill.file-exists-strategy",
+      "type": "io.github.songrongzhen.easyagent.skill.config.EasyAgentSkillProperties$FileExistsStrategy",
+      "defaultValue": "ASK",
+      "description": "Strategy when generated Skill file already exists: ASK, COPY, OVERWRITE, ERROR"
     },
     {
       "name": "easy-agent.llm.enabled",

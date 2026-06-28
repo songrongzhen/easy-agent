@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -88,14 +89,24 @@ public class SkillGeneratorService {
     }
 
     public void generateSkill(SkillInput input) throws IOException {
+        generateSkill(input, null);
+    }
+
+    public void generateSkill(SkillInput input, EasyAgentSkillProperties.FileExistsStrategy fileExistsStrategy) throws IOException {
+        validateSkillInput(input);
         String outputPath = properties.getSkillOutputPath();
-        Path skillDir = Paths.get(outputPath, "skill");
+        Path skillDir = Paths.get(outputPath, "skill").toAbsolutePath().normalize();
         
         if (!Files.exists(skillDir)) {
             Files.createDirectories(skillDir);
         }
         
-        Path path = skillDir.resolve(input.name() + ".md");
+        String filename = sanitizeFilename(input.name()) + ".md";
+        Path path = skillDir.resolve(filename).normalize();
+        if (!path.startsWith(skillDir)) {
+            throw new IllegalArgumentException("Skill file path is outside of skill output directory");
+        }
+        path = resolveTargetPath(path, fileExistsStrategy != null ? fileExistsStrategy : properties.getFileExistsStrategy());
         String content = buildSkillMarkdown(input);
         Files.writeString(path, content);
         
@@ -145,6 +156,95 @@ public class SkillGeneratorService {
         sb.append(input.example()).append("\n");
         
         return sb.toString();
+    }
+
+    private void validateSkillInput(SkillInput input) {
+        if (input == null) {
+            throw new IllegalArgumentException("Skill input is required");
+        }
+        if (isBlank(input.name())) {
+            throw new IllegalArgumentException("Skill name is required");
+        }
+        if (isBlank(input.description())) {
+            throw new IllegalArgumentException("Skill description is required");
+        }
+        if (isBlank(input.boundary())) {
+            throw new IllegalArgumentException("Skill boundary is required");
+        }
+        if (isBlank(input.example())) {
+            throw new IllegalArgumentException("Skill example is required");
+        }
+        if (input.selectedTools() == null || input.selectedTools().isEmpty()) {
+            throw new IllegalArgumentException("selectedTools must not be empty");
+        }
+
+        Set<String> availableToolNames = toolRegistry.getEnabledTools().stream()
+                .map(ToolDefinition::name)
+                .collect(Collectors.toSet());
+        List<String> missingTools = input.selectedTools().stream()
+                .filter(this::isBlank)
+                .collect(Collectors.toList());
+        if (!missingTools.isEmpty()) {
+            throw new IllegalArgumentException("selectedTools must not contain blank tool names");
+        }
+
+        missingTools = input.selectedTools().stream()
+                .filter(toolName -> !availableToolNames.contains(toolName))
+                .collect(Collectors.toList());
+        if (!missingTools.isEmpty()) {
+            throw new IllegalArgumentException("Unknown selectedTools: " + String.join(", ", missingTools));
+        }
+    }
+
+    private String sanitizeFilename(String name) {
+        String sanitized = name.trim()
+                .replaceAll("[\\\\/:*?\"<>|]", "-")
+                .replaceAll("\\s+", "-")
+                .replaceAll("\\.+", ".")
+                .replaceAll("^-+", "")
+                .replaceAll("-+$", "");
+        if (sanitized.isBlank() || ".".equals(sanitized) || "..".equals(sanitized)) {
+            throw new IllegalArgumentException("Skill name cannot be used as a file name");
+        }
+        return sanitized;
+    }
+
+    private Path resolveTargetPath(Path path, EasyAgentSkillProperties.FileExistsStrategy strategy) throws IOException {
+        if (!Files.exists(path)) {
+            return path;
+        }
+        return switch (strategy) {
+            case OVERWRITE -> path;
+            case COPY -> resolveCopyPath(path);
+            case ERROR -> throw new IllegalStateException("Skill file already exists: " + path.getFileName());
+            case ASK -> throw new SkillFileAlreadyExistsException(path.getFileName().toString());
+        };
+    }
+
+    private Path resolveCopyPath(Path path) {
+        String filename = path.getFileName().toString();
+        int dotIndex = filename.lastIndexOf('.');
+        String basename = dotIndex > 0 ? filename.substring(0, dotIndex) : filename;
+        String extension = dotIndex > 0 ? filename.substring(dotIndex) : "";
+        Path parent = path.getParent();
+
+        int copyIndex = 1;
+        Path copyPath;
+        do {
+            copyPath = parent.resolve(basename + "-copy-" + copyIndex + extension).normalize();
+            copyIndex++;
+        } while (Files.exists(copyPath));
+        return copyPath;
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    public static class SkillFileAlreadyExistsException extends IOException {
+        public SkillFileAlreadyExistsException(String filename) {
+            super("Skill file already exists: " + filename);
+        }
     }
 
     public record SkillInput(

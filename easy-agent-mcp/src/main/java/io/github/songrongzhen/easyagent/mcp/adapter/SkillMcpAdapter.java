@@ -2,6 +2,7 @@ package io.github.songrongzhen.easyagent.mcp.adapter;
 
 import io.github.songrongzhen.easyagent.mcp.protocol.McpProtocol;
 
+import io.github.songrongzhen.easyagent.skill.config.EasyAgentSkillProperties;
 import io.github.songrongzhen.easyagent.skill.service.SkillGeneratorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +34,7 @@ public class SkillMcpAdapter {
         McpProtocol.JsonSchema schema = new McpProtocol.JsonSchema("object", properties, List.of());
         return new McpProtocol.Tool(
                 "skill.list_tools",
-                "获取用户项目中所有可用的 @EasyTool 工具列表，用于创建 Skill 时选择需要调用的工具",
+                "skill元技能获取项目中所有可用的 @EasyTool 工具列表，用于创建 Skill 时选择需要调用的工具",
                 schema
         );
     }
@@ -45,12 +46,13 @@ public class SkillMcpAdapter {
         properties.put("boundary", new McpProtocol.PropertyDef("string", "Skill 的使用边界和限制"));
         properties.put("selectedTools", new McpProtocol.PropertyDef("array", "选择的工具名称列表"));
         properties.put("example", new McpProtocol.PropertyDef("string", "使用示例"));
+        properties.put("fileExistsStrategy", new McpProtocol.PropertyDef("string", "同名文件已存在时的处理策略：copy 或 overwrite"));
         
         List<String> required = List.of("name", "description", "boundary", "selectedTools", "example");
         McpProtocol.JsonSchema schema = new McpProtocol.JsonSchema("object", properties, required);
         return new McpProtocol.Tool(
                 "skill.generate",
-                "生成 SKILL.md 文件到 skill/ 目录下",
+                "生成业务 Skill Markdown 文件到 skill/{name}.md",
                 schema
         );
     }
@@ -116,11 +118,15 @@ public class SkillMcpAdapter {
             return error("Error: selectedTools must be an array of strings");
         }
 
-        SkillGeneratorService.SkillInput input = new SkillGeneratorService.SkillInput(
-                name, description, boundary, selectedTools, example, null
-        );
+        EasyAgentSkillProperties.FileExistsStrategy fileExistsStrategy = resolveFileExistsStrategy(arguments.get("fileExistsStrategy"));
+        SkillGeneratorService.SkillInput input = new SkillGeneratorService.SkillInput(name, description, boundary, selectedTools, example, null);
         
-        skillGeneratorService.generateSkill(input);
+        try {
+            skillGeneratorService.generateSkill(input, fileExistsStrategy);
+        } catch (SkillGeneratorService.SkillFileAlreadyExistsException e) {
+            return error("Skill 文件已存在：" + e.getMessage()
+                    + "。请询问使用者是生成副本还是覆盖；生成副本时重新调用 skill.generate 并传 fileExistsStrategy=copy，覆盖时传 fileExistsStrategy=overwrite。");
+        }
         
         return new McpProtocol.CallToolResult(
                 List.of(McpProtocol.Content.text("Skill 文件已生成到 skill/" + name + ".md")),
@@ -134,6 +140,20 @@ public class SkillMcpAdapter {
             return null;
         }
         return text;
+    }
+
+    private EasyAgentSkillProperties.FileExistsStrategy resolveFileExistsStrategy(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (!(value instanceof String text) || text.isBlank()) {
+            throw new IllegalArgumentException("fileExistsStrategy must be copy or overwrite");
+        }
+        return switch (text.trim().toLowerCase()) {
+            case "copy" -> EasyAgentSkillProperties.FileExistsStrategy.COPY;
+            case "overwrite" -> EasyAgentSkillProperties.FileExistsStrategy.OVERWRITE;
+            default -> throw new IllegalArgumentException("fileExistsStrategy must be copy or overwrite");
+        };
     }
 
     private McpProtocol.CallToolResult error(String message) {
