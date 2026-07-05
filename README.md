@@ -104,7 +104,54 @@ public class OrderService {
 - `ToolProvider`：自定义工具提供者，可编程式注册工具
 - `ToolExecutionListener`：工具执行监听器，支持 before/after/error 钩子
 
-> 当前版本提供了 SPI 接口定义，但 Starter 尚未自动收集 `ToolProvider` 或在 `ToolExecutor` 中触发 `ToolExecutionListener`。
+业务系统引入 Starter 后，只需要把 `ToolProvider` 声明为 Spring Bean，easy-agent 会自动收集并注册其返回的工具定义。`priority()` 数值越小越先注册；如果工具名称重复，按 `ToolRegistry` 的现有规则覆盖。
+
+```java
+@Component
+public class BusinessToolProvider implements ToolProvider {
+
+    @Override
+    public Collection<ToolDefinition> provide() {
+        return List.of(new ToolDefinition(
+                "queryUserPermission",
+                "查询当前用户权限",
+                "user",
+                "permissionService",
+                "queryCurrentUserPermission",
+                List.of(),
+                true
+        ));
+    }
+
+    @Override
+    public int priority() {
+        return 0;
+    }
+}
+```
+
+业务系统也可以声明 `ToolExecutionListener` Bean，用于记录日志、审计、监控埋点或统计工具调用情况。`beforeExecution` 在业务工具调用前触发，`afterExecution` 在调用成功后触发，`onError` 在调用失败时触发。
+
+```java
+@Component
+public class BusinessToolExecutionListener implements ToolExecutionListener {
+
+    @Override
+    public void beforeExecution(ToolInvocation invocation) {
+        log.info("准备执行工具：{}", invocation.toolName());
+    }
+
+    @Override
+    public void afterExecution(ToolInvocation invocation, ToolResult result) {
+        log.info("工具执行成功：{}", invocation.toolName());
+    }
+
+    @Override
+    public void onError(ToolInvocation invocation, Throwable error) {
+        log.warn("工具执行失败：{}", invocation.toolName(), error);
+    }
+}
+```
 
 ---
 
