@@ -346,7 +346,7 @@ easy-agent:
 <dependency>
     <groupId>io.github.songrongzhen</groupId>
     <artifactId>easy-agent-spring-boot-starter</artifactId>
-    <version>0.1.6</version>
+    <version>0.1.7</version>
 </dependency>
 ```
 
@@ -361,7 +361,7 @@ easy-agent:
     # MCP 初始化握手时返回的服务名称
     server-name: easy-agent-mcp-server
     # MCP 初始化握手时返回的服务版本
-    server-version: 0.1.6
+    server-version: 0.1.7
     # MCP 接口跨域配置，仅作用于 /mcp/** 路径（CORS 配置可以不写，默认开启本地跨域。）
     cors:
       # 是否启用 MCP CORS 过滤器
@@ -480,7 +480,7 @@ easy-agent:
     # MCP 初始化握手时返回的服务名称
     server-name: easy-agent-mcp-server
     # MCP 初始化握手时返回的服务版本
-    server-version: 0.1.6
+    server-version: 0.1.7
     # MCP 接口跨域配置，仅作用于 /mcp/** 路径 （CORS 配置可以不写，默认开启本地跨域。）
     cors:
       # 是否启用 MCP CORS 过滤器
