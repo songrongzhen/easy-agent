@@ -29,7 +29,8 @@ public class EasyAgentLlmAutoConfiguration {
     @ConditionalOnMissingBean
     public AgentLlmService agentLlmService(LlmService llmService,
                                            ToolRegistry toolRegistry,
-                                           ToolExecutor toolExecutor) {
-        return new AgentLlmService(llmService, toolRegistry, toolExecutor);
+                                           ToolExecutor toolExecutor,
+                                           EasyAgentLlmProperties properties) {
+        return new AgentLlmService(llmService, toolRegistry, toolExecutor, properties);
     }
 }

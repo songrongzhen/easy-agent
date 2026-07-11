@@ -23,6 +23,8 @@ public class EasyAgentLlmProperties {
 
     private ChatOptions chatOptions = new ChatOptions();
 
+    private ToolExecution toolExecution = new ToolExecution();
+
     public enum LlmProvider {
         AUTO,
         NONE,
@@ -89,6 +91,28 @@ public class EasyAgentLlmProperties {
         public void setMaxTokens(int maxTokens) { this.maxTokens = maxTokens; }
     }
 
+    public static class ToolExecution {
+        private int maxToolRounds = 5;
+        private boolean retryEnabled = true;
+        private int retryAttempts = 1;
+        private long retryBackoffMillis = 200L;
+        private boolean fallbackToChatEnabled = true;
+        private int repeatedToolCallThreshold = 3;
+
+        public int getMaxToolRounds() { return maxToolRounds; }
+        public void setMaxToolRounds(int maxToolRounds) { this.maxToolRounds = maxToolRounds; }
+        public boolean isRetryEnabled() { return retryEnabled; }
+        public void setRetryEnabled(boolean retryEnabled) { this.retryEnabled = retryEnabled; }
+        public int getRetryAttempts() { return retryAttempts; }
+        public void setRetryAttempts(int retryAttempts) { this.retryAttempts = retryAttempts; }
+        public long getRetryBackoffMillis() { return retryBackoffMillis; }
+        public void setRetryBackoffMillis(long retryBackoffMillis) { this.retryBackoffMillis = retryBackoffMillis; }
+        public boolean isFallbackToChatEnabled() { return fallbackToChatEnabled; }
+        public void setFallbackToChatEnabled(boolean fallbackToChatEnabled) { this.fallbackToChatEnabled = fallbackToChatEnabled; }
+        public int getRepeatedToolCallThreshold() { return repeatedToolCallThreshold; }
+        public void setRepeatedToolCallThreshold(int repeatedToolCallThreshold) { this.repeatedToolCallThreshold = repeatedToolCallThreshold; }
+    }
+
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
     public LlmProvider getProvider() { return provider; }
@@ -107,6 +131,8 @@ public class EasyAgentLlmProperties {
     public void setOpenAi(OpenAi openAi) { this.openAi = openAi; }
     public ChatOptions getChatOptions() { return chatOptions; }
     public void setChatOptions(ChatOptions chatOptions) { this.chatOptions = chatOptions; }
+    public ToolExecution getToolExecution() { return toolExecution; }
+    public void setToolExecution(ToolExecution toolExecution) { this.toolExecution = toolExecution; }
     
     public LlmProvider inferProvider() {
         if (provider != LlmProvider.AUTO) {

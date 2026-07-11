@@ -1,6 +1,8 @@
 package io.github.songrongzhen.easyagent.mcp.adapter;
 
 import io.github.songrongzhen.easyagent.mcp.protocol.McpProtocol;
+import io.github.songrongzhen.easyagent.mcp.protocol.McpErrorCode;
+import io.github.songrongzhen.easyagent.mcp.protocol.McpErrorFactory;
 
 import io.github.songrongzhen.easyagent.skill.service.SkillGeneratorService;
 import org.slf4j.Logger;
@@ -58,10 +60,7 @@ public class SkillMcpAdapter {
 
     public McpProtocol.CallToolResult executeSkillTool(String toolName, Map<String, Object> arguments) {
         if (toolName == null || !toolName.startsWith("skill.")) {
-            return new McpProtocol.CallToolResult(
-                    List.of(McpProtocol.Content.text("Unknown skill tool: " + toolName)),
-                    true
-            );
+            return McpErrorFactory.toolError(McpErrorCode.TOOL_NOT_FOUND, "toolName=" + toolName);
         }
 
         try {
@@ -69,16 +68,13 @@ public class SkillMcpAdapter {
                 case "skill.list_tools" -> handleListTools();
                 case "skill.generate" -> handleGenerateSkill(arguments);
                 default -> new McpProtocol.CallToolResult(
-                        List.of(McpProtocol.Content.text("Unknown skill tool: " + toolName)),
+                        List.of(McpProtocol.Content.text(McpErrorFactory.buildMessage(McpErrorCode.TOOL_NOT_FOUND, "toolName=" + toolName))),
                         true
                 );
             };
         } catch (Exception e) {
             log.error("Failed to execute skill tool: {}", toolName, e);
-            return new McpProtocol.CallToolResult(
-                    List.of(McpProtocol.Content.text("Error: " + e.getMessage())),
-                    true
-            );
+            return McpErrorFactory.toolError(McpErrorCode.TOOL_EXECUTION_FAILED, e.getMessage());
         }
     }
 
@@ -93,7 +89,7 @@ public class SkillMcpAdapter {
     @SuppressWarnings("unchecked")
     private McpProtocol.CallToolResult handleGenerateSkill(Map<String, Object> arguments) throws IOException {
         if (arguments == null) {
-            return error("Error: arguments are required");
+            return McpErrorFactory.toolError(McpErrorCode.INVALID_PARAMS, "arguments 不能为空");
         }
 
         String name = getRequiredString(arguments, "name");
@@ -101,20 +97,20 @@ public class SkillMcpAdapter {
         String boundary = getRequiredString(arguments, "boundary");
         String example = getRequiredString(arguments, "example");
         if (name == null || description == null || boundary == null || example == null) {
-            return error("Error: name, description, boundary and example must be non-empty strings");
+            return McpErrorFactory.toolError(McpErrorCode.INVALID_PARAMS, "name、description、boundary、example 不能为空");
         }
         
         List<String> selectedTools;
         Object toolsObj = arguments.get("selectedTools");
         if (toolsObj instanceof List<?> toolsList) {
             if (!toolsList.stream().allMatch(String.class::isInstance)) {
-                return error("Error: selectedTools must be an array of strings");
+                return McpErrorFactory.toolError(McpErrorCode.INVALID_PARAMS, "selectedTools 必须是字符串数组");
             }
             selectedTools = (List<String>) toolsList;
         } else if (toolsObj instanceof String) {
             selectedTools = List.of((String) toolsObj);
         } else {
-            return error("Error: selectedTools must be an array of strings");
+            return McpErrorFactory.toolError(McpErrorCode.INVALID_PARAMS, "selectedTools 必须是字符串数组");
         }
 
         SkillGeneratorService.FileExistsStrategy fileExistsStrategy = resolveFileExistsStrategy(arguments.get("fileExistsStrategy"));
@@ -123,7 +119,7 @@ public class SkillMcpAdapter {
         try {
             skillGeneratorService.generateSkill(input, fileExistsStrategy);
         } catch (SkillGeneratorService.SkillFileAlreadyExistsException e) {
-            return error("Skill 文件已存在：" + e.getMessage()
+            return McpErrorFactory.toolError(McpErrorCode.INVALID_PARAMS, "Skill 文件已存在：" + e.getMessage()
                     + "。请询问使用者是生成副本还是覆盖；生成副本时重新调用 skill.generate 并传 fileExistsStrategy=copy，覆盖时传 fileExistsStrategy=overwrite。");
         }
         
@@ -155,10 +151,4 @@ public class SkillMcpAdapter {
         };
     }
 
-    private McpProtocol.CallToolResult error(String message) {
-        return new McpProtocol.CallToolResult(
-                List.of(McpProtocol.Content.text(message)),
-                true
-        );
-    }
 }

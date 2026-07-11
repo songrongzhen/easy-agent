@@ -16,6 +16,8 @@ public class EasyAgentMcpProperties {
 
     private Cors cors = new Cors();
 
+    private ToolExposure toolExposure = new ToolExposure();
+
     public static class Cors {
         private boolean enabled = true;
         private List<String> allowedOriginPatterns = new ArrayList<>(
@@ -40,6 +42,31 @@ public class EasyAgentMcpProperties {
         public void setAllowCredentials(Boolean allowCredentials) { this.allowCredentials = allowCredentials; }
     }
 
+    public static class ToolExposure {
+        private boolean enabled = false;
+        private List<String> allowedTools = new ArrayList<>();
+        private List<String> blockedTools = new ArrayList<>();
+        private List<String> allowedSources = new ArrayList<>();
+        private List<String> blockedSources = new ArrayList<>();
+        private List<String> allowedCategories = new ArrayList<>();
+        private List<String> blockedCategories = new ArrayList<>();
+
+        public boolean isEnabled() { return enabled; }
+        public void setEnabled(boolean enabled) { this.enabled = enabled; }
+        public List<String> getAllowedTools() { return allowedTools; }
+        public void setAllowedTools(List<String> allowedTools) { this.allowedTools = allowedTools; }
+        public List<String> getBlockedTools() { return blockedTools; }
+        public void setBlockedTools(List<String> blockedTools) { this.blockedTools = blockedTools; }
+        public List<String> getAllowedSources() { return allowedSources; }
+        public void setAllowedSources(List<String> allowedSources) { this.allowedSources = allowedSources; }
+        public List<String> getBlockedSources() { return blockedSources; }
+        public void setBlockedSources(List<String> blockedSources) { this.blockedSources = blockedSources; }
+        public List<String> getAllowedCategories() { return allowedCategories; }
+        public void setAllowedCategories(List<String> allowedCategories) { this.allowedCategories = allowedCategories; }
+        public List<String> getBlockedCategories() { return blockedCategories; }
+        public void setBlockedCategories(List<String> blockedCategories) { this.blockedCategories = blockedCategories; }
+    }
+
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
     public String getServerName() { return serverName; }
@@ -48,4 +75,6 @@ public class EasyAgentMcpProperties {
     public void setServerVersion(String serverVersion) { this.serverVersion = serverVersion; }
     public Cors getCors() { return cors; }
     public void setCors(Cors cors) { this.cors = cors; }
+    public ToolExposure getToolExposure() { return toolExposure; }
+    public void setToolExposure(ToolExposure toolExposure) { this.toolExposure = toolExposure; }
 }

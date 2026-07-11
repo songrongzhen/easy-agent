@@ -16,17 +16,60 @@ public class ToolRegistry {
     private final Map<String, ToolDefinition> tools = new ConcurrentHashMap<>();
 
     public void register(ToolDefinition definition) {
-        if (definition == null || definition.name() == null || definition.name().isBlank()) {
-            log.warn("Attempted to register a tool with null or blank name, ignoring");
+        registerOrFail(definition);
+    }
+
+    public void register(ToolDefinition definition, ConflictStrategy strategy) {
+        if (strategy == null) {
+            register(definition);
+            return;
+        }
+
+        switch (strategy) {
+            case FAIL_FAST -> registerOrFail(definition);
+            case KEEP_EXISTING -> registerIfAbsent(definition);
+            case REPLACE_EXISTING -> registerOrReplace(definition);
+        }
+    }
+
+    public void registerIfAbsent(ToolDefinition definition) {
+        if (!isValid(definition)) {
             return;
         }
         ToolDefinition existing = tools.putIfAbsent(definition.name(), definition);
         if (existing != null) {
-            log.warn("Tool '{}' already registered, overwriting with new definition", definition.name());
-            tools.put(definition.name(), definition);
-        } else {
-            log.info("Registered tool: {} - {}", definition.name(), definition.description());
+            log.info("Tool '{}' already registered, keeping existing definition from {}",
+                    definition.name(), safeSource(existing));
+            return;
         }
+        log.info("Registered tool: {} - {} [{}]",
+                definition.name(), definition.description(), safeSource(definition));
+    }
+
+    public void registerOrReplace(ToolDefinition definition) {
+        if (!isValid(definition)) {
+            return;
+        }
+        ToolDefinition existing = tools.put(definition.name(), definition);
+        if (existing != null) {
+            log.warn("Tool '{}' already registered, replacing {} with {}",
+                    definition.name(), safeSource(existing), safeSource(definition));
+        } else {
+            log.info("Registered tool: {} - {} [{}]",
+                    definition.name(), definition.description(), safeSource(definition));
+        }
+    }
+
+    public void registerOrFail(ToolDefinition definition) {
+        if (!isValid(definition)) {
+            return;
+        }
+        ToolDefinition existing = tools.putIfAbsent(definition.name(), definition);
+        if (existing != null) {
+            throw new IllegalStateException("Tool '" + definition.name() + "' already registered from "
+                    + safeSource(existing) + ", new source: " + safeSource(definition));
+        }
+        log.info("Registered tool: {} - {} [{}]", definition.name(), definition.description(), safeSource(definition));
     }
 
     public void unregister(String toolName) {
@@ -67,5 +110,26 @@ public class ToolRegistry {
     public void clear() {
         tools.clear();
         log.info("Tool registry cleared");
+    }
+
+    private boolean isValid(ToolDefinition definition) {
+        if (definition == null || definition.name() == null || definition.name().isBlank()) {
+            log.warn("Attempted to register a tool with null or blank name, ignoring");
+            return false;
+        }
+        return true;
+    }
+
+    private String safeSource(ToolDefinition definition) {
+        if (definition == null || definition.source() == null || definition.source().isBlank()) {
+            return "unknown";
+        }
+        return definition.source();
+    }
+
+    public enum ConflictStrategy {
+        FAIL_FAST,
+        KEEP_EXISTING,
+        REPLACE_EXISTING
     }
 }

@@ -3,6 +3,8 @@ package io.github.songrongzhen.easyagent.mcp.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.songrongzhen.easyagent.mcp.config.EasyAgentMcpProperties;
+import io.github.songrongzhen.easyagent.mcp.protocol.McpErrorCode;
+import io.github.songrongzhen.easyagent.mcp.protocol.McpErrorFactory;
 import io.github.songrongzhen.easyagent.mcp.protocol.McpProtocol;
 import io.github.songrongzhen.easyagent.mcp.server.EasyAgentMcpServer;
 import org.slf4j.Logger;
@@ -37,10 +39,10 @@ public class McpController {
             request = OBJECT_MAPPER.readValue(requestBody, McpProtocol.JsonRpcRequest.class);
         } catch (JsonProcessingException e) {
             log.warn("Failed to parse MCP JSON-RPC request", e);
-            return jsonResponse(McpProtocol.JsonRpcResponse.error(null, McpProtocol.PARSE_ERROR, "Parse error: " + e.getOriginalMessage()));
+            return jsonResponse(McpErrorFactory.jsonRpcError(null, McpErrorCode.PARSE_ERROR, e.getOriginalMessage()));
         } catch (Exception e) {
             log.error("Failed to handle HTTP MCP request", e);
-            return jsonResponse(McpProtocol.JsonRpcResponse.error(null, McpProtocol.INTERNAL_ERROR, e.getMessage()));
+            return jsonResponse(McpErrorFactory.jsonRpcError(null, McpErrorCode.INTERNAL_ERROR, e.getMessage()));
         }
 
         log.debug("Received HTTP MCP request: method={}, id={}", request.method(), request.id());
@@ -76,10 +78,10 @@ public class McpController {
             return jsonResponse(response);
         } catch (JsonProcessingException e) {
             log.warn("Failed to parse MCP GET params", e);
-            return jsonResponse(McpProtocol.JsonRpcResponse.error("1", McpProtocol.PARSE_ERROR, "Parse error: " + e.getOriginalMessage()));
+            return jsonResponse(McpErrorFactory.jsonRpcError("1", McpErrorCode.PARSE_ERROR, e.getOriginalMessage()));
         } catch (Exception e) {
             log.error("Failed to handle MCP GET request", e);
-            return jsonResponse(McpProtocol.JsonRpcResponse.error("1", McpProtocol.INTERNAL_ERROR, e.getMessage()));
+            return jsonResponse(McpErrorFactory.jsonRpcError("1", McpErrorCode.INTERNAL_ERROR, e.getMessage()));
         }
     }
 

@@ -15,6 +15,8 @@ import org.springframework.context.ApplicationContext;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.List;
 
 public class ToolExecutor {
@@ -39,6 +41,10 @@ public class ToolExecutor {
     }
 
     public ToolResult execute(ToolInvocation invocation) {
+        if (invocation == null || invocation.toolName() == null || invocation.toolName().isBlank()) {
+            return ToolResult.failure(null, "Tool name is required");
+        }
+
         ToolDefinition toolDef = toolRegistry.getTool(invocation.toolName());
         if (toolDef == null) {
             return ToolResult.failure(invocation.toolName(), "Tool not found: " + invocation.toolName());
@@ -89,13 +95,16 @@ public class ToolExecutor {
     }
 
     private Method findMethod(Class<?> beanClass, String methodName, List<ParameterDefinition> paramDefs) throws NoSuchMethodException {
+        if (methodName == null || methodName.isBlank()) {
+            throw new NoSuchMethodException("Method name is required");
+        }
         Method[] methods = beanClass.getMethods();
         for (Method m : methods) {
-            if (m.getName().equals(methodName) && m.getParameterCount() == paramDefs.size()) {
+            if (m.getName().equals(methodName) && matchesParameters(m.getParameters(), paramDefs)) {
                 return m;
             }
         }
-        throw new NoSuchMethodException("Method not found: " + methodName + " with " + paramDefs.size() + " parameters");
+        throw new NoSuchMethodException("Method not found: " + methodName + " with signature " + signatureOf(paramDefs));
     }
 
     private Object[] resolveArguments(String argumentsJson, List<ParameterDefinition> paramDefs, Method method) throws JsonProcessingException {
@@ -106,15 +115,61 @@ public class ToolExecutor {
         JsonNode argsNode = OBJECT_MAPPER.readTree(argumentsJson);
         Parameter[] methodParams = method.getParameters();
         Object[] args = new Object[paramDefs.size()];
+        Map<String, JsonNode> argMap = new LinkedHashMap<>();
+        if (argsNode != null && argsNode.isObject()) {
+            argsNode.fields().forEachRemaining(entry -> argMap.put(entry.getKey(), entry.getValue()));
+        }
 
         for (int i = 0; i < paramDefs.size(); i++) {
             ParameterDefinition paramDef = paramDefs.get(i);
-            JsonNode valueNode = argsNode.get(paramDef.name());
+            JsonNode valueNode = argMap.get(paramDef.name());
+            if (paramDef.required() && (valueNode == null || valueNode.isNull())) {
+                throw new IllegalArgumentException("Missing required parameter: " + paramDef.name());
+            }
             Class<?> paramType = methodParams[i].getType();
             args[i] = convertValue(valueNode, paramType);
         }
 
         return args;
+    }
+
+    private boolean matchesParameters(Parameter[] methodParams, List<ParameterDefinition> paramDefs) {
+        if (methodParams == null) {
+            return paramDefs == null || paramDefs.isEmpty();
+        }
+        if (paramDefs == null) {
+            return methodParams.length == 0;
+        }
+        if (methodParams.length != paramDefs.size()) {
+            return false;
+        }
+        for (int i = 0; i < methodParams.length; i++) {
+            Parameter methodParam = methodParams[i];
+            ParameterDefinition toolParam = paramDefs.get(i);
+            if (toolParam == null || toolParam.name() == null || toolParam.name().isBlank()) {
+                return false;
+            }
+            if (methodParam == null || methodParam.getName() == null || methodParam.getName().isBlank()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private String signatureOf(List<ParameterDefinition> paramDefs) {
+        if (paramDefs == null || paramDefs.isEmpty()) {
+            return "()";
+        }
+        StringBuilder builder = new StringBuilder("(");
+        for (int i = 0; i < paramDefs.size(); i++) {
+            ParameterDefinition paramDef = paramDefs.get(i);
+            if (i > 0) {
+                builder.append(", ");
+            }
+            builder.append(paramDef == null ? "unknown" : paramDef.type()).append(" ").append(paramDef == null ? "unknown" : paramDef.name());
+        }
+        builder.append(")");
+        return builder.toString();
     }
 
     private Object convertValue(JsonNode valueNode, Class<?> targetType) {

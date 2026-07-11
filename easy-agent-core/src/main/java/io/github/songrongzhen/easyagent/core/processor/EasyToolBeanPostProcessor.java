@@ -21,6 +21,7 @@ import java.util.List;
 public class EasyToolBeanPostProcessor implements BeanPostProcessor {
 
     private static final Logger log = LoggerFactory.getLogger(EasyToolBeanPostProcessor.class);
+    private static final String SOURCE_PREFIX = "annotation";
 
     private final ToolRegistry toolRegistry;
     private final ApplicationContext applicationContext;
@@ -36,7 +37,7 @@ public class EasyToolBeanPostProcessor implements BeanPostProcessor {
             EasyTool easyTool = AnnotationUtils.findAnnotation(method, EasyTool.class);
             if (easyTool != null && easyTool.enabled()) {
                 ToolDefinition definition = buildToolDefinition(easyTool, method, beanName);
-                toolRegistry.register(definition);
+                toolRegistry.registerOrFail(definition);
             }
         });
         return bean;
@@ -69,9 +70,12 @@ public class EasyToolBeanPostProcessor implements BeanPostProcessor {
                 easyTool.name(),
                 easyTool.description(),
                 easyTool.category(),
+                SOURCE_PREFIX,
+                0,
                 beanName,
                 method.getName(),
                 parameters,
+                "1",
                 easyTool.enabled()
         );
     }

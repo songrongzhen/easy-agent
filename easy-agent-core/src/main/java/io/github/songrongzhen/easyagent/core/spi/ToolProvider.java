@@ -20,4 +20,18 @@ public interface ToolProvider {
     default int priority() {
         return 0;
     }
+
+    /**
+     * 返回工具来源名称。
+     */
+    default String source() {
+        return getClass().getSimpleName();
+    }
+
+    /**
+     * 返回工具版本。
+     */
+    default String version() {
+        return "1";
+    }
 }

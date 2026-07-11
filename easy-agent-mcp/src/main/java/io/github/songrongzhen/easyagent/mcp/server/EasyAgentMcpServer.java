@@ -5,6 +5,8 @@ import io.github.songrongzhen.easyagent.core.registry.ToolRegistry;
 import io.github.songrongzhen.easyagent.mcp.adapter.McpToolAdapter;
 import io.github.songrongzhen.easyagent.mcp.adapter.SkillMcpAdapter;
 import io.github.songrongzhen.easyagent.mcp.config.EasyAgentMcpProperties;
+import io.github.songrongzhen.easyagent.mcp.protocol.McpErrorCode;
+import io.github.songrongzhen.easyagent.mcp.protocol.McpErrorFactory;
 import io.github.songrongzhen.easyagent.mcp.protocol.McpProtocol;
 import io.github.songrongzhen.easyagent.skill.service.SkillGeneratorService;
 import org.slf4j.Logger;
@@ -27,16 +29,17 @@ public class EasyAgentMcpServer {
                               ToolExecutor toolExecutor,
                               SkillGeneratorService skillGeneratorService) {
         this.properties = properties;
-        this.mcpToolAdapter = new McpToolAdapter(toolRegistry, toolExecutor);
+        this.mcpToolAdapter = new McpToolAdapter(toolRegistry, toolExecutor,
+                new McpToolExposurePolicy(properties.getToolExposure()));
         this.skillMcpAdapter = (skillGeneratorService != null) ? new SkillMcpAdapter(skillGeneratorService) : null;
     }
 
     public McpProtocol.JsonRpcResponse handleRequest(McpProtocol.JsonRpcRequest request) {
         if (request == null) {
-            return McpProtocol.JsonRpcResponse.error(null, McpProtocol.INVALID_REQUEST, "Invalid request: request body is required");
+            return McpErrorFactory.jsonRpcError(null, McpErrorCode.INVALID_REQUEST, "request body is required");
         }
         if (request.method() == null || request.method().isBlank()) {
-            return McpProtocol.JsonRpcResponse.error(request.id(), McpProtocol.INVALID_REQUEST, "Invalid request: method is required");
+            return McpErrorFactory.jsonRpcError(request.id(), McpErrorCode.INVALID_REQUEST, "method is required");
         }
 
         try {
@@ -56,10 +59,10 @@ public class EasyAgentMcpServer {
             return McpProtocol.JsonRpcResponse.error(request.id(), e.getCode(), e.getMessage());
         } catch (UnsupportedOperationException e) {
             log.error("Method not found: {}", request.method(), e);
-            return McpProtocol.JsonRpcResponse.error(request.id(), McpProtocol.METHOD_NOT_FOUND, e.getMessage());
+            return McpErrorFactory.jsonRpcError(request.id(), McpErrorCode.METHOD_NOT_FOUND, e.getMessage());
         } catch (Exception e) {
             log.error("Failed to handle MCP request: {}", request.method(), e);
-            return McpProtocol.JsonRpcResponse.error(request.id(), McpProtocol.INTERNAL_ERROR, e.getMessage());
+            return McpErrorFactory.jsonRpcError(request.id(), McpErrorCode.INTERNAL_ERROR, e.getMessage());
         }
     }
 
@@ -87,12 +90,12 @@ public class EasyAgentMcpServer {
             return McpProtocol.LATEST_PROTOCOL_VERSION;
         }
         if (!(protocolVersionObj instanceof String requestedVersion) || requestedVersion.isBlank()) {
-            throw new McpRequestException(McpProtocol.INVALID_PARAMS, "Invalid protocolVersion: must be a string");
+            throw new McpRequestException(McpErrorCode.INVALID_PARAMS.getCode(), McpErrorCode.INVALID_PARAMS.getMessage());
         }
         if (!McpProtocol.SUPPORTED_PROTOCOL_VERSIONS.contains(requestedVersion)) {
-            throw new McpRequestException(McpProtocol.INVALID_PARAMS,
-                    "Unsupported protocolVersion: " + requestedVersion
-                            + ", supported versions: " + McpProtocol.SUPPORTED_PROTOCOL_VERSIONS);
+            throw new McpRequestException(McpErrorCode.INVALID_PARAMS.getCode(),
+                    McpErrorFactory.buildMessage(McpErrorCode.INVALID_PARAMS,
+                            "不支持的 protocolVersion: " + requestedVersion + "，当前支持: " + McpProtocol.SUPPORTED_PROTOCOL_VERSIONS));
         }
         return requestedVersion;
     }
@@ -107,38 +110,31 @@ public class EasyAgentMcpServer {
         if (skillMcpAdapter != null) {
             tools.addAll(skillMcpAdapter.getSkillTools());
         }
+        if (properties.getToolExposure() != null && properties.getToolExposure().isEnabled()) {
+            tools = tools.stream()
+                    .filter(tool -> mcpToolAdapter.getExposurePolicy().isAllowed(tool.name()))
+                    .toList();
+        }
         return new McpProtocol.ListToolsResult(tools);
     }
 
     private McpProtocol.CallToolResult handleToolsCall(McpProtocol.JsonRpcRequest request) {
         Map<String, Object> params = request.params();
         if (params == null) {
-            return new McpProtocol.CallToolResult(
-                    List.of(McpProtocol.Content.text("Error: missing parameters")),
-                    true
-            );
+            return McpErrorFactory.toolError(McpErrorCode.INVALID_PARAMS, "缺少参数");
         }
         
         Object nameObj = params.get("name");
         if (!(nameObj instanceof String toolName)) {
-            return new McpProtocol.CallToolResult(
-                    List.of(McpProtocol.Content.text("Error: tool name must be a string")),
-                    true
-            );
+            return McpErrorFactory.toolError(McpErrorCode.INVALID_PARAMS, "tool name 必须是字符串");
         }
         if (toolName == null || toolName.isEmpty()) {
-            return new McpProtocol.CallToolResult(
-                    List.of(McpProtocol.Content.text("Error: tool name is required")),
-                    true
-            );
+            return McpErrorFactory.toolError(McpErrorCode.INVALID_PARAMS, "tool name 不能为空");
         }
 
         Object argumentsObj = params.get("arguments");
         if (argumentsObj != null && !(argumentsObj instanceof Map<?, ?>)) {
-            return new McpProtocol.CallToolResult(
-                    List.of(McpProtocol.Content.text("Error: arguments must be an object")),
-                    true
-            );
+            return McpErrorFactory.toolError(McpErrorCode.INVALID_PARAMS, "arguments 必须是对象");
         }
 
         @SuppressWarnings("unchecked")
@@ -146,10 +142,11 @@ public class EasyAgentMcpServer {
         
         if (toolName.startsWith("skill.")) {
             if (skillMcpAdapter == null) {
-                return new McpProtocol.CallToolResult(
-                        List.of(McpProtocol.Content.text("Error: Skill module is not enabled")),
-                        true
-                );
+                return McpErrorFactory.toolError(McpErrorCode.SKILL_MODULE_DISABLED);
+            }
+            if (properties.getToolExposure() != null && properties.getToolExposure().isEnabled()
+                    && !mcpToolAdapter.getExposurePolicy().isAllowed(toolName)) {
+                return McpErrorFactory.toolError(McpErrorCode.TOOL_NOT_ALLOWED, "toolName=" + toolName);
             }
             log.info("MCP skill tool call: {}", toolName);
             return skillMcpAdapter.executeSkillTool(toolName, arguments);
