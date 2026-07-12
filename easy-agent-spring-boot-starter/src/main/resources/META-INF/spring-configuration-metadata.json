@@ -144,7 +144,7 @@
     {
       "name": "easy-agent.mcp.server-version",
       "type": "java.lang.String",
-      "defaultValue": "0.1.7",
+      "defaultValue": "0.1.8",
       "description": "MCP server version returned during initialize"
     },
     {

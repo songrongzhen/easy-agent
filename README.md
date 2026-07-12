@@ -386,7 +386,7 @@ easy-agent:
 <dependency>
     <groupId>io.github.songrongzhen</groupId>
     <artifactId>easy-agent-spring-boot-starter</artifactId>
-    <version>0.1.7</version>
+    <version>0.1.8</version>
 </dependency>
 ```
 
@@ -401,7 +401,7 @@ easy-agent:
     # MCP 初始化握手时返回的服务名称
     server-name: easy-agent-mcp-server
     # MCP 初始化握手时返回的服务版本
-    server-version: 0.1.7
+    server-version: 0.1.8
     # 是否开启 MCP 工具暴露过滤，默认 false；不配置时保持全部暴露
     tool-exposure:
       # 是否启用过滤层
@@ -546,7 +546,7 @@ easy-agent:
     # MCP 初始化握手时返回的服务名称
     server-name: easy-agent-mcp-server
     # MCP 初始化握手时返回的服务版本
-    server-version: 0.1.7
+    server-version: 0.1.8
     # 是否开启 MCP 工具暴露过滤，默认 false；不配置时保持全部暴露
     tool-exposure:
       # 是否启用过滤层
