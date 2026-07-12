@@ -3,12 +3,10 @@ package io.github.songrongzhen.easyagent.mcp.server;
 import io.github.songrongzhen.easyagent.core.executor.ToolExecutor;
 import io.github.songrongzhen.easyagent.core.registry.ToolRegistry;
 import io.github.songrongzhen.easyagent.mcp.adapter.McpToolAdapter;
-import io.github.songrongzhen.easyagent.mcp.adapter.SkillMcpAdapter;
 import io.github.songrongzhen.easyagent.mcp.config.EasyAgentMcpProperties;
 import io.github.songrongzhen.easyagent.mcp.protocol.McpErrorCode;
 import io.github.songrongzhen.easyagent.mcp.protocol.McpErrorFactory;
 import io.github.songrongzhen.easyagent.mcp.protocol.McpProtocol;
-import io.github.songrongzhen.easyagent.skill.service.SkillGeneratorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,16 +20,13 @@ public class EasyAgentMcpServer {
 
     private final EasyAgentMcpProperties properties;
     private final McpToolAdapter mcpToolAdapter;
-    private final SkillMcpAdapter skillMcpAdapter;
 
     public EasyAgentMcpServer(EasyAgentMcpProperties properties,
                               ToolRegistry toolRegistry,
-                              ToolExecutor toolExecutor,
-                              SkillGeneratorService skillGeneratorService) {
+                              ToolExecutor toolExecutor) {
         this.properties = properties;
         this.mcpToolAdapter = new McpToolAdapter(toolRegistry, toolExecutor,
                 new McpToolExposurePolicy(properties.getToolExposure()));
-        this.skillMcpAdapter = (skillGeneratorService != null) ? new SkillMcpAdapter(skillGeneratorService) : null;
     }
 
     public McpProtocol.JsonRpcResponse handleRequest(McpProtocol.JsonRpcRequest request) {
@@ -107,9 +102,6 @@ public class EasyAgentMcpServer {
 
     private McpProtocol.ListToolsResult handleToolsList() {
         List<McpProtocol.Tool> tools = new ArrayList<>(mcpToolAdapter.convertToMcpTools());
-        if (skillMcpAdapter != null) {
-            tools.addAll(skillMcpAdapter.getSkillTools());
-        }
         if (properties.getToolExposure() != null && properties.getToolExposure().isEnabled()) {
             tools = tools.stream()
                     .filter(tool -> mcpToolAdapter.getExposurePolicy().isAllowed(tool.name()))
@@ -139,19 +131,7 @@ public class EasyAgentMcpServer {
 
         @SuppressWarnings("unchecked")
         Map<String, Object> arguments = argumentsObj instanceof Map<?, ?> ? (Map<String, Object>) argumentsObj : Map.of();
-        
-        if (toolName.startsWith("skill.")) {
-            if (skillMcpAdapter == null) {
-                return McpErrorFactory.toolError(McpErrorCode.SKILL_MODULE_DISABLED);
-            }
-            if (properties.getToolExposure() != null && properties.getToolExposure().isEnabled()
-                    && !mcpToolAdapter.getExposurePolicy().isAllowed(toolName)) {
-                return McpErrorFactory.toolError(McpErrorCode.TOOL_NOT_ALLOWED, "toolName=" + toolName);
-            }
-            log.info("MCP skill tool call: {}", toolName);
-            return skillMcpAdapter.executeSkillTool(toolName, arguments);
-        }
-        
+
         log.info("MCP tool call: {}", toolName);
         return mcpToolAdapter.executeMcpTool(toolName, arguments);
     }
@@ -165,14 +145,7 @@ public class EasyAgentMcpServer {
     }
 
     public void start() {
-        List<McpProtocol.Tool> tools = new ArrayList<>(mcpToolAdapter.convertToMcpTools());
-        if (skillMcpAdapter != null) {
-            tools.addAll(skillMcpAdapter.getSkillTools());
-        }
-        log.info("Easy Agent MCP Server started - {} tools available", tools.size());
-        for (McpProtocol.Tool tool : tools) {
-            log.info("  MCP Tool: {} - {}", tool.name(), tool.description());
-        }
+        log.info("Easy Agent MCP Server started - tools will be resolved dynamically from ToolRegistry");
     }
 
     private static class McpRequestException extends RuntimeException {

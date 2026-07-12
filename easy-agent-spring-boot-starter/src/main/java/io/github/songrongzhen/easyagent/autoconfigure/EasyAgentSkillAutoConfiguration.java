@@ -2,7 +2,9 @@ package io.github.songrongzhen.easyagent.autoconfigure;
 
 import io.github.songrongzhen.easyagent.core.registry.ToolRegistry;
 import io.github.songrongzhen.easyagent.skill.config.EasyAgentSkillProperties;
+import io.github.songrongzhen.easyagent.skill.provider.SkillToolProvider;
 import io.github.songrongzhen.easyagent.skill.service.SkillGeneratorService;
+import io.github.songrongzhen.easyagent.skill.service.SkillToolService;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -20,5 +22,17 @@ public class EasyAgentSkillAutoConfiguration {
     @ConditionalOnMissingBean
     public SkillGeneratorService skillGeneratorService(ToolRegistry toolRegistry, EasyAgentSkillProperties properties) {
         return new SkillGeneratorService(toolRegistry, properties);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public SkillToolService skillToolService(SkillGeneratorService skillGeneratorService) {
+        return new SkillToolService(skillGeneratorService);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public SkillToolProvider skillToolProvider() {
+        return new SkillToolProvider();
     }
 }

@@ -1,6 +1,6 @@
 package io.github.songrongzhen.easyagent.mcp.adapter;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.songrongzhen.easyagent.core.executor.ToolExecutor;
 import io.github.songrongzhen.easyagent.core.model.ParameterDefinition;
@@ -59,7 +59,7 @@ public class McpToolAdapter {
 
             if (result.success()) {
                 return new McpProtocol.CallToolResult(
-                        List.of(McpProtocol.Content.text(result.result())),
+                        List.of(McpProtocol.Content.text(formatToolResult(result.result()))),
                         false
                 );
             } else {
@@ -73,6 +73,21 @@ public class McpToolAdapter {
 
     public McpToolExposurePolicy getExposurePolicy() {
         return exposurePolicy;
+    }
+
+    private String formatToolResult(String result) {
+        if (result == null || result.isBlank()) {
+            return "";
+        }
+        try {
+            JsonNode node = OBJECT_MAPPER.readTree(result);
+            if (node != null && node.isTextual()) {
+                return node.asText();
+            }
+        } catch (Exception ignored) {
+            return result;
+        }
+        return result;
     }
 
     private McpProtocol.Tool toMcpTool(ToolDefinition toolDef) {
@@ -100,8 +115,8 @@ public class McpToolAdapter {
             case "float", "double" -> "number";
             case "boolean" -> "boolean";
             case "string", "char", "character" -> "string";
-            case "list", "arraylist", "set", "hashset" -> "array";
-            case "map", "hashmap", "linkedhashmap" -> "object";
+            case "list", "array", "arraylist", "set", "hashset" -> "array";
+            case "map", "object", "hashmap", "linkedhashmap" -> "object";
             default -> "string";
         };
     }

@@ -3,6 +3,7 @@ package io.github.songrongzhen.easyagent.skill.service;
 import io.github.songrongzhen.easyagent.core.model.ToolDefinition;
 import io.github.songrongzhen.easyagent.core.registry.ToolRegistry;
 import io.github.songrongzhen.easyagent.skill.config.EasyAgentSkillProperties;
+import io.github.songrongzhen.easyagent.skill.provider.SkillToolProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -55,6 +56,8 @@ public class SkillGeneratorService {
     public List<ToolInfo> getAllAvailableTools() {
         Collection<ToolDefinition> tools = toolRegistry.getEnabledTools();
         return tools.stream()
+                .filter(tool -> !SkillToolProvider.CATEGORY.equals(tool.category()))
+                .filter(tool -> !SkillToolProvider.SOURCE.equals(tool.source()))
                 .map(tool -> new ToolInfo(
                         tool.name(),
                         tool.description(),

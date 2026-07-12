@@ -10,8 +10,7 @@ public enum McpErrorCode {
     TOOL_NOT_FOUND(4101, "工具不存在"),
     TOOL_NOT_ALLOWED(4102, "当前工具未被允许暴露"),
     TOOL_ARGUMENTS_INVALID(4103, "工具参数不合法"),
-    TOOL_EXECUTION_FAILED(4104, "工具执行失败"),
-    SKILL_MODULE_DISABLED(4105, "Skill 模块未启用");
+    TOOL_EXECUTION_FAILED(4104, "工具执行失败");
 
     private final int code;
     private final String message;

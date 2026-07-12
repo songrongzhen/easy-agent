@@ -166,12 +166,12 @@
     {
       "name": "easy-agent.mcp.tool-exposure.allowed-sources",
       "type": "java.util.List<java.lang.String>",
-      "description": "Allowed MCP tool sources"
+      "description": "Allowed MCP tool sources, for example annotation, skill, or a ToolProvider class name"
     },
     {
       "name": "easy-agent.mcp.tool-exposure.blocked-sources",
       "type": "java.util.List<java.lang.String>",
-      "description": "Blocked MCP tool sources"
+      "description": "Blocked MCP tool sources, for example annotation, skill, or a ToolProvider class name"
     },
     {
       "name": "easy-agent.mcp.tool-exposure.allowed-categories",

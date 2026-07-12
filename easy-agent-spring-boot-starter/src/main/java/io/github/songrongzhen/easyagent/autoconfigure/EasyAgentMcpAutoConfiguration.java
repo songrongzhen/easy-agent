@@ -5,7 +5,6 @@ import io.github.songrongzhen.easyagent.core.registry.ToolRegistry;
 import io.github.songrongzhen.easyagent.mcp.config.EasyAgentMcpProperties;
 import io.github.songrongzhen.easyagent.mcp.config.McpCorsConfig;
 import io.github.songrongzhen.easyagent.mcp.server.EasyAgentMcpServer;
-import io.github.songrongzhen.easyagent.skill.service.SkillGeneratorService;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -14,7 +13,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplicat
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-import org.springframework.lang.Nullable;
 
 @AutoConfiguration
 @ConditionalOnClass(name = "io.github.songrongzhen.easyagent.mcp.server.EasyAgentMcpServer")
@@ -28,9 +26,8 @@ public class EasyAgentMcpAutoConfiguration {
     @ConditionalOnMissingBean
     public EasyAgentMcpServer easyAgentMcpServer(EasyAgentMcpProperties properties,
                                                   ToolRegistry toolRegistry,
-                                                  ToolExecutor toolExecutor,
-                                                  @Nullable SkillGeneratorService skillGeneratorService) {
-        EasyAgentMcpServer server = new EasyAgentMcpServer(properties, toolRegistry, toolExecutor, skillGeneratorService);
+                                                  ToolExecutor toolExecutor) {
+        EasyAgentMcpServer server = new EasyAgentMcpServer(properties, toolRegistry, toolExecutor);
         server.start();
         return server;
     }
