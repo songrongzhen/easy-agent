@@ -130,6 +130,17 @@
       "description": "Path to Excel knowledge base files"
     },
     {
+      "name": "easy-agent.rag.html.html-request-timeout",
+      "type": "java.time.Duration",
+      "defaultValue": "30s",
+      "description": "Timeout for requesting HTML knowledge URLs"
+    },
+    {
+      "name": "easy-agent.rag.html.allowed-domains",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Allowed domains or IP patterns for HTML knowledge URLs. Supports * wildcard. Empty means public http/https URLs are allowed, while localhost and private addresses are still blocked."
+    },
+    {
       "name": "easy-agent.mcp.enabled",
       "type": "java.lang.Boolean",
       "defaultValue": true,

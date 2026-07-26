@@ -2,6 +2,10 @@ package io.github.songrongzhen.easyagent.rag.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * RAG模块配置
  */
@@ -17,6 +21,8 @@ public class EasyAgentRagProperties {
     private Pdf pdf = new Pdf();
 
     private Excel excel = new Excel();
+
+    private Html html = new Html();
 
     private Search search = new Search();
 
@@ -141,6 +147,16 @@ public class EasyAgentRagProperties {
         public void setResourcePath(String resourcePath) { this.resourcePath = resourcePath; }
     }
 
+    public static class Html {
+        private Duration htmlRequestTimeout = Duration.ofSeconds(30);
+        private List<String> allowedDomains = new ArrayList<>();
+
+        public Duration getHtmlRequestTimeout() { return htmlRequestTimeout; }
+        public void setHtmlRequestTimeout(Duration htmlRequestTimeout) { this.htmlRequestTimeout = htmlRequestTimeout; }
+        public List<String> getAllowedDomains() { return allowedDomains; }
+        public void setAllowedDomains(List<String> allowedDomains) { this.allowedDomains = allowedDomains; }
+    }
+
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
     public StorageType getStorageType() { return storageType; }
@@ -151,6 +167,8 @@ public class EasyAgentRagProperties {
     public void setPdf(Pdf pdf) { this.pdf = pdf; }
     public Excel getExcel() { return excel; }
     public void setExcel(Excel excel) { this.excel = excel; }
+    public Html getHtml() { return html; }
+    public void setHtml(Html html) { this.html = html; }
     public Search getSearch() { return search; }
     public void setSearch(Search search) { this.search = search; }
 }

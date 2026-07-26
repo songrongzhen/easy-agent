@@ -199,7 +199,7 @@ Skill 模块当前提供的是业务 Skill Markdown 文件生成能力：通过 
 
 ### 3. RAG 检索增强生成
 
-RAG 模块支持在启动时加载 `classpath:knowledge/` 下的 PDF、Excel 文件，切分为 `DocumentChunk` 后放入检索存储，并提供 Embedding、Cosine、TF-IDF 三种搜索策略。检索结果会在 `DocumentChunk.score` 中携带相关性分数。
+RAG 模块支持在启动时加载 `classpath:knowledge/` 下的 PDF、Excel 文件，也支持运行时添加 PDF、Excel、HTML 文件和在线 HTML 知识库 URL，内容会切分为 `DocumentChunk` 后放入检索存储，并提供 Embedding、Cosine、TF-IDF 三种搜索策略。检索结果会在 `DocumentChunk.score` 中携带相关性分数。
 
 **存储策略：**
 
@@ -223,17 +223,20 @@ RAG 模块支持在启动时加载 `classpath:knowledge/` 下的 PDF、Excel 文
 - PDF 支持按字符长度分块（可配置 chunk 大小和重叠）
 - PDF 的 `chunk-overlap` 必须小于 `chunk-size`
 - Excel 按行生成文档块
+- HTML 文件和 URL 页面会清理脚本、样式、导航、页脚等噪音后提取正文
 - 启动时自动索引，无需手动操作
 
 **运行时维护：**
 
-- 支持运行时添加 PDF、Excel 文档到知识库
+- 支持运行时添加 PDF、Excel、HTML 文档到知识库
+- 支持运行时添加在线 HTML 知识库 URL 到知识库
 - 支持按 `source` 删除文档块
 - 支持按 `documentId` 删除文档块
 - 支持清空索引
 - 支持重新扫描默认知识库目录并重建索引
 
 > easy-agent 只提供 Java API，不默认暴露上传接口。业务系统负责上传入口、权限控制、文件大小限制、用户或租户隔离。
+> URL 知识库默认只允许 `http` / `https`，并内置拦截 `localhost`、`127.0.0.1`、`0.0.0.0`、内网 IP、link-local 等 SSRF 风险地址；如配置 `allowed-domains`，则只允许访问命中的域名或 IP 通配范围。
 
 ```java
 @Service
@@ -495,7 +498,16 @@ easy-agent:
       enabled: true
       # Excel 文件所在目录（支持 classpath: 前缀）
       resource-path: classpath:knowledge/
-    # 说明：pdf.enabled 和 excel.enabled 同时影响启动加载和运行时 addDocument 支持的文件类型
+    html:
+      # 请求用户指定 HTML 知识库 URL 的超时时间，非必须，默认 30s
+      html-request-timeout: 30s
+      # 允许请求的域名或 IP 范围，非必须；支持 * 通配符
+      # 不配置时允许正常公网 http/https URL，但仍会默认拦截 localhost、内网 IP 等 SSRF 风险地址
+      allowed-domains:
+        # - docs.company.com
+        # - "*.company.com"
+        # - 189.30.56.*
+    # 说明：pdf.enabled 和 excel.enabled 同时影响启动加载和运行时 addDocument 支持的文件类型；html 配置用于 addUrl 请求控制
 
   # Skill 配置（可选；不配置时默认启用，并在项目根目录下生成 /skill/）
   skill:
@@ -640,7 +652,16 @@ easy-agent:
       enabled: true
       # Excel 文件所在目录（支持 classpath: 前缀）
       resource-path: classpath:knowledge/
-    # 说明：pdf.enabled 和 excel.enabled 同时影响启动加载和运行时 addDocument 支持的文件类型
+    html:
+      # 请求用户指定 HTML 知识库 URL 的超时时间，非必须，默认 30s
+      html-request-timeout: 30s
+      # 允许请求的域名或 IP 范围，非必须；支持 * 通配符
+      # 不配置时允许正常公网 http/https URL，但仍会默认拦截 localhost、内网 IP 等 SSRF 风险地址
+      allowed-domains:
+        # - docs.company.com
+        # - "*.company.com"
+        # - 189.30.56.*
+    # 说明：pdf.enabled 和 excel.enabled 同时影响启动加载和运行时 addDocument 支持的文件类型；html 配置用于 addUrl 请求控制
   # Skill 配置（可选；不配置时默认启用，并在项目根目录下生成 /skill/）
   skill:
     # 是否启用业务 Skill Markdown 文件生成能力，默认 true
@@ -877,6 +898,17 @@ public class KnowledgeController {
         return ragService.addDocument(documentId, file.getOriginalFilename(), file.getInputStream());
     }
 
+    @PostMapping("/url")
+    public List<DocumentChunk> addUrl(@RequestParam String url) throws IOException {
+        return ragService.addUrl(url);
+    }
+
+    @PostMapping("/{documentId}/url")
+    public List<DocumentChunk> addUrlWithDocumentId(@PathVariable String documentId,
+                                                    @RequestParam String url) throws IOException {
+        return ragService.addUrl(documentId, url);
+    }
+
     @DeleteMapping("/source")
     public void deleteBySource(@RequestParam String source) {
         ragService.deleteBySource(source);
@@ -899,7 +931,7 @@ public class KnowledgeController {
 }
 ```
 
-`addDocument(filename, inputStream)` 会自动生成 `documentId`，返回的 `DocumentChunk.metadata` 中包含该值。业务系统如果已有自己的文件 ID，建议调用 `addDocument(documentId, filename, inputStream)`，后续可以直接用该 ID 删除或替换文档。
+`addDocument(filename, inputStream)` 和 `addUrl(url)` 会自动生成 `documentId`，返回的 `DocumentChunk.metadata` 中包含该值。业务系统如果已有自己的文件 ID，建议调用 `addDocument(documentId, filename, inputStream)` 或 `addUrl(documentId, url)`，后续可以直接用该 ID 删除或替换文档。
 
 ### 4. skill模块
 ```java

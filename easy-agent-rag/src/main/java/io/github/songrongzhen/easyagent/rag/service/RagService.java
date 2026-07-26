@@ -3,17 +3,24 @@ package io.github.songrongzhen.easyagent.rag.service;
 import io.github.songrongzhen.easyagent.rag.config.EasyAgentRagProperties;
 import io.github.songrongzhen.easyagent.rag.loader.DocumentLoader;
 import io.github.songrongzhen.easyagent.rag.loader.ExcelDocumentLoader;
+import io.github.songrongzhen.easyagent.rag.loader.HtmlDocumentLoader;
 import io.github.songrongzhen.easyagent.rag.loader.PdfDocumentLoader;
 import io.github.songrongzhen.easyagent.rag.store.DocumentChunk;
 import io.github.songrongzhen.easyagent.rag.store.VectorStoreProvider;
+import io.github.songrongzhen.easyagent.rag.web.FetchedHtmlDocument;
+import io.github.songrongzhen.easyagent.rag.web.UrlDocumentFetcher;
+import io.github.songrongzhen.easyagent.rag.web.UrlSafetyValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public class RagService {
@@ -23,11 +30,17 @@ public class RagService {
     private final VectorStoreProvider vectorStoreProvider;
     private final EasyAgentRagProperties properties;
     private final List<DocumentLoader> documentLoaders;
+    private final HtmlDocumentLoader htmlDocumentLoader;
+    private final UrlSafetyValidator urlSafetyValidator;
+    private final UrlDocumentFetcher urlDocumentFetcher;
 
     public RagService(VectorStoreProvider vectorStoreProvider, EasyAgentRagProperties properties) {
         this.vectorStoreProvider = vectorStoreProvider;
         this.properties = properties;
+        this.htmlDocumentLoader = new HtmlDocumentLoader();
         this.documentLoaders = createDocumentLoaders(properties);
+        this.urlSafetyValidator = new UrlSafetyValidator(properties.getHtml().getAllowedDomains());
+        this.urlDocumentFetcher = new UrlDocumentFetcher(properties.getHtml().getHtmlRequestTimeout(), urlSafetyValidator);
     }
 
     @PostConstruct
@@ -106,6 +119,54 @@ public class RagService {
             log.info("Added runtime document: documentId={}, filename={}, chunks={}", documentId, filename, chunks.size());
         }
         return chunks;
+    }
+
+    /**
+     * 添加 URL HTML 知识库页面到知识库。
+     */
+    public synchronized List<DocumentChunk> addUrl(String url) throws IOException {
+        return addUrl(generateDocumentId(url), url);
+    }
+
+    /**
+     * 添加指定文档ID的 URL HTML 知识库页面到知识库。
+     */
+    public synchronized List<DocumentChunk> addUrl(String documentId, String url) throws IOException {
+        validateUrlInput(documentId, url);
+        URI uri = urlSafetyValidator.validate(url);
+        FetchedHtmlDocument fetchedHtmlDocument = urlDocumentFetcher.fetch(uri);
+        List<DocumentChunk> chunks = htmlDocumentLoader.loadHtml(
+                documentId,
+                fetchedHtmlDocument.url(),
+                fetchedHtmlDocument.html(),
+                fetchedHtmlDocument.url()
+        );
+        chunks = enrichUrlMetadata(chunks, fetchedHtmlDocument);
+        if (!chunks.isEmpty()) {
+            vectorStoreProvider.deleteByDocumentId(documentId);
+            vectorStoreProvider.add(chunks);
+            log.info("Added URL HTML document: documentId={}, url={}, chunks={}", documentId, fetchedHtmlDocument.url(), chunks.size());
+        }
+        return chunks;
+    }
+
+    private List<DocumentChunk> enrichUrlMetadata(List<DocumentChunk> chunks, FetchedHtmlDocument fetchedHtmlDocument) {
+        List<DocumentChunk> enrichedChunks = new ArrayList<>(chunks.size());
+        for (DocumentChunk chunk : chunks) {
+            Map<String, Object> metadata = new HashMap<>(chunk.metadata() == null ? Map.of() : chunk.metadata());
+            metadata.put("url", fetchedHtmlDocument.url());
+            metadata.put("host", fetchedHtmlDocument.host());
+            metadata.put("contentType", fetchedHtmlDocument.contentType());
+            enrichedChunks.add(new DocumentChunk(
+                    chunk.id(),
+                    chunk.content(),
+                    chunk.source(),
+                    metadata,
+                    chunk.embedding(),
+                    chunk.score()
+            ));
+        }
+        return enrichedChunks;
     }
 
     /**
@@ -197,6 +258,7 @@ public class RagService {
         if (properties.getExcel().isEnabled()) {
             loaders.add(new ExcelDocumentLoader(properties.getExcel().getResourcePath()));
         }
+        loaders.add(htmlDocumentLoader);
         return loaders;
     }
 
@@ -216,6 +278,15 @@ public class RagService {
         }
         if (inputStream == null) {
             throw new IllegalArgumentException("inputStream must not be null");
+        }
+    }
+
+    private void validateUrlInput(String documentId, String url) {
+        if (documentId == null || documentId.isBlank()) {
+            throw new IllegalArgumentException("documentId must not be blank");
+        }
+        if (url == null || url.isBlank()) {
+            throw new IllegalArgumentException("url must not be blank");
         }
     }
 
