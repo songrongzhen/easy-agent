@@ -7,7 +7,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/JDK-17%2B-green" alt="JDK 17+">
   <img src="https://img.shields.io/badge/Spring%20Boot-3.5%2B-brightgreen" alt="Spring Boot 3.5+">
-  <img src="https://img.shields.io/badge/Spring%20AI-1.0%2B-blue" alt="Spring AI 1.0+">
+  <img src="https://img.shields.io/badge/Spring%20AI-1.0.0--M6-blue" alt="Spring AI 1.0.0-M6">
   <img src="https://img.shields.io/badge/License-Apache%202.0-blue" alt="License">
 </p>
 

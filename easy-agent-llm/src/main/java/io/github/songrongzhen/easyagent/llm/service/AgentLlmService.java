@@ -107,7 +107,7 @@ public class AgentLlmService {
             if (fallbackEnabled()) {
                 return buildErrorPayload("TOOL_EXECUTION_FAILED", e.getMessage());
             }
-            return buildErrorPayload("TOOL_EXECUTION_FAILED", e.getMessage());
+            throw e;
         }
     }
 
@@ -115,7 +115,7 @@ public class AgentLlmService {
         RuntimeException lastException = null;
         ToolResult lastResult = null;
         int attempts = resolveRetryAttempts();
-        for (int i = 0; i < attempts; i++) {
+        for (int i = 0; i <= attempts; i++) {
             try {
                 ToolResult result = toolExecutor.execute(new ToolInvocation(toolName, arguments));
                 if (result != null && result.success()) {
@@ -201,7 +201,11 @@ public class AgentLlmService {
         if (value == null) {
             return "";
         }
-        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+        return value.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
     }
 
     private boolean retryEnabled() {
@@ -243,7 +247,7 @@ public class AgentLlmService {
     private <T> T invokeWithRetry(SupplierWithException<T> supplier) {
         RuntimeException last = null;
         int attempts = resolveRetryAttempts();
-        for (int i = 0; i < attempts; i++) {
+        for (int i = 0; i <= attempts; i++) {
             try {
                 return supplier.get();
             } catch (RuntimeException e) {
