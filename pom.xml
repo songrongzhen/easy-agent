@@ -10,7 +10,7 @@
     <packaging>pom</packaging>
 
     <name>Easy Agent</name>
-    <description>An intelligent Agent development kit for modern Java applications, built on Spring Boot 3.5+ and Spring AI 1.1+</description>
+    <description>An intelligent Agent development kit for modern Java applications, built on Spring Boot 3.5+ and Spring AI 1.0.0-M6</description>
     <url>https://github.com/songrongzhen/easy-agent</url>
 
     <licenses>
