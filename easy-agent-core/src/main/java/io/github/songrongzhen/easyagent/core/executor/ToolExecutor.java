@@ -152,6 +152,12 @@ public class ToolExecutor {
             if (methodParam == null || methodParam.getName() == null || methodParam.getName().isBlank()) {
                 return false;
             }
+            // 只按「名字 + 参数个数」匹配时，同名同参个数的重载方法会命中
+            // getMethods() 的不确定顺序，静默调用错误的方法。根 pom 已开启
+            // -parameters，这里对参数名做严格相等校验以消除歧义。
+            if (!methodParam.getName().equals(toolParam.name())) {
+                return false;
+            }
         }
         return true;
     }
