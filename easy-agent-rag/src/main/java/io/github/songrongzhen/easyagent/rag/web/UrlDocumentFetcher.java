@@ -38,16 +38,21 @@ public class UrlDocumentFetcher {
         URI currentUri = uri;
         for (int redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount++) {
             HttpResponse<InputStream> response = sendRequest(currentUri);
-            int statusCode = response.statusCode();
-            if (isRedirect(statusCode)) {
-                currentUri = resolveRedirectUri(currentUri, response);
-                continue;
+            // ofInputStream() 只有在流被关闭（或读到底）时才归还底层连接；
+            // 重定向与校验失败路径若不显式关闭，每次都会泄漏一条连接
+            // （http→https 跳转是常见场景，反复抓取会耗尽连接）。
+            try (InputStream body = response.body()) {
+                int statusCode = response.statusCode();
+                if (isRedirect(statusCode)) {
+                    currentUri = resolveRedirectUri(currentUri, response);
+                    continue;
+                }
+                validateStatusCode(statusCode, currentUri);
+                String contentType = response.headers().firstValue("Content-Type").orElse("");
+                validateHtmlContentType(contentType, currentUri);
+                String html = readBody(body, resolveCharset(contentType), currentUri);
+                return new FetchedHtmlDocument(currentUri.toString(), currentUri.getHost(), contentType, html);
             }
-            validateStatusCode(statusCode, currentUri);
-            String contentType = response.headers().firstValue("Content-Type").orElse("");
-            validateHtmlContentType(contentType, currentUri);
-            String html = readBody(response.body(), resolveCharset(contentType), currentUri);
-            return new FetchedHtmlDocument(currentUri.toString(), currentUri.getHost(), contentType, html);
         }
         throw new IOException("HTML knowledge URL redirected too many times: " + uri);
     }

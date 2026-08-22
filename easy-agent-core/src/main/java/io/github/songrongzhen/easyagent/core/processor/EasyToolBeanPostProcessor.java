@@ -16,7 +16,9 @@ import org.springframework.util.ReflectionUtils;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class EasyToolBeanPostProcessor implements BeanPostProcessor {
 
@@ -33,9 +35,16 @@ public class EasyToolBeanPostProcessor implements BeanPostProcessor {
 
     @Override
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+        Set<String> seenToolNames = new HashSet<>();
         ReflectionUtils.doWithMethods(bean.getClass(), method -> {
             EasyTool easyTool = AnnotationUtils.findAnnotation(method, EasyTool.class);
             if (easyTool != null && easyTool.enabled()) {
+                // doWithMethods 会沿继承链/CGLIB 代理类遍历，同一逻辑方法（子类覆盖、
+                // 代理方法与目标类原方法）可能被访问多次；同名工具只注册首个，
+                // 否则 registerOrFail 会抛 IllegalStateException 直接打断应用启动。
+                if (!seenToolNames.add(easyTool.name())) {
+                    return;
+                }
                 ToolDefinition definition = buildToolDefinition(easyTool, method, beanName);
                 toolRegistry.registerOrFail(definition);
             }

@@ -88,6 +88,10 @@ public class OpenAiCompatibleClient {
             }
 
             return OBJECT_MAPPER.readValue(httpResponse.body(), OpenAiCompatibleApi.ChatCompletionResponse.class);
+        } catch (InterruptedException e) {
+            // 不恢复中断标记会让线程池里的取消信号被吞掉
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(providerName + " API call interrupted", e);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to serialize/deserialize LLM request/response", e);
         } catch (Exception e) {
@@ -195,13 +199,19 @@ public class OpenAiCompatibleClient {
             HttpResponse<java.util.stream.Stream<String>> httpResponse =
                     httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofLines());
 
-            if (httpResponse.statusCode() < 200 || httpResponse.statusCode() >= 300) {
-                String errorBody = httpResponse.body().collect(Collectors.joining("\n"));
-                throw new RuntimeException(providerName + " streaming failed: " + httpResponse.statusCode()
-                        + ", body: " + errorBody);
+            // ofLines() 的 Stream 持有底层连接，只有关闭或读到底才归还；
+            // 解析/消费中途抛异常时若不关闭，连接会被一直占用。
+            try (java.util.stream.Stream<String> lines = httpResponse.body()) {
+                if (httpResponse.statusCode() < 200 || httpResponse.statusCode() >= 300) {
+                    String errorBody = lines.collect(Collectors.joining("\n"));
+                    throw new RuntimeException(providerName + " streaming failed: " + httpResponse.statusCode()
+                            + ", body: " + errorBody);
+                }
+                lines.forEach(line -> handleStreamLine(line, consumer));
             }
-
-            httpResponse.body().forEach(line -> handleStreamLine(line, consumer));
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(providerName + " streaming interrupted", e);
         } catch (Exception e) {
             if (e instanceof RuntimeException) throw (RuntimeException) e;
             throw new RuntimeException(providerName + " streaming failed", e);

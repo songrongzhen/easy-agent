@@ -52,6 +52,9 @@ public class McpProtocol {
         }
     }
 
+    // 与 JsonRpcResponse 保持一致：data 为空时不应序列化出 "data":null，
+    // 严格的 JSON-RPC/MCP 客户端会校验多余成员
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public record JsonRpcError(int code, String message, Object data) {
         public JsonRpcError(int code, String message) {
             this(code, message, null);
