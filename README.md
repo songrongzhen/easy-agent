@@ -698,7 +698,6 @@ logging:
 ```
 easy-agent/
 ├── pom.xml                                    # 父 POM：依赖管理、插件配置
-├── docker-compose.yml                         # 开发环境示例
 ├── easy-agent-core/
 │   └── src/main/java/.../core/
 │       ├── annotation/
