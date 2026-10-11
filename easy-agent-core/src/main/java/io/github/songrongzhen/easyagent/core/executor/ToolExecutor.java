@@ -2,6 +2,11 @@ package io.github.songrongzhen.easyagent.core.executor;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.cfg.CoercionAction;
+import com.fasterxml.jackson.databind.cfg.CoercionInputShape;
+import com.fasterxml.jackson.databind.type.LogicalType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.songrongzhen.easyagent.core.model.ParameterDefinition;
 import io.github.songrongzhen.easyagent.core.model.ToolDefinition;
@@ -15,14 +20,23 @@ import org.springframework.context.ApplicationContext;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.List;
 
 public class ToolExecutor {
 
     private static final Logger log = LoggerFactory.getLogger(ToolExecutor.class);
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = createObjectMapper();
+
+    private static ObjectMapper createObjectMapper() {
+        ObjectMapper mapper = new ObjectMapper()
+                .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+                .enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION)
+                .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT);
+        for (LogicalType type : List.of(LogicalType.Integer, LogicalType.Float, LogicalType.Boolean)) {
+            mapper.coercionConfigFor(type).setCoercion(CoercionInputShape.EmptyString, CoercionAction.Fail);
+        }
+        return mapper;
+    }
 
     private final ToolRegistry toolRegistry;
     private final ApplicationContext applicationContext;
@@ -50,11 +64,15 @@ public class ToolExecutor {
             return ToolResult.failure(invocation.toolName(), "Tool not found: " + invocation.toolName());
         }
 
+        if (!toolDef.enabled()) {
+            return ToolResult.failure(invocation.toolName(), "Tool is disabled: " + invocation.toolName());
+        }
+
         try {
-            notifyBefore(invocation);
             Object bean = applicationContext.getBean(toolDef.beanName());
             Method method = findMethod(bean.getClass(), toolDef.methodName(), toolDef.parameters());
             Object[] args = resolveArguments(invocation.arguments(), toolDef.parameters(), method);
+            notifyBefore(invocation);
             Object result = method.invoke(bean, args);
             String resultStr = result == null ? "" : OBJECT_MAPPER.writeValueAsString(result);
             ToolResult toolResult = ToolResult.success(invocation.toolName(), resultStr);
@@ -62,7 +80,8 @@ public class ToolExecutor {
             return toolResult;
         } catch (Exception e) {
             log.error("Failed to execute tool: {}", invocation.toolName(), e);
-            Throwable error = e.getCause() != null ? e.getCause() : e;
+            Throwable error = e instanceof java.lang.reflect.InvocationTargetException && e.getCause() != null
+                    ? e.getCause() : e;
             notifyError(invocation, error);
             return ToolResult.failure(invocation.toolName(), error.getMessage());
         }
@@ -108,26 +127,34 @@ public class ToolExecutor {
     }
 
     private Object[] resolveArguments(String argumentsJson, List<ParameterDefinition> paramDefs, Method method) throws JsonProcessingException {
-        if (paramDefs.isEmpty()) {
-            return new Object[0];
+        if (argumentsJson == null || argumentsJson.isBlank()) {
+            throw new IllegalArgumentException("Tool arguments must be a JSON object");
         }
-
         JsonNode argsNode = OBJECT_MAPPER.readTree(argumentsJson);
+        if (argsNode == null || !argsNode.isObject()) {
+            throw new IllegalArgumentException("Tool arguments must be a JSON object");
+        }
+        paramDefs = paramDefs == null ? List.of() : paramDefs;
         Parameter[] methodParams = method.getParameters();
         Object[] args = new Object[paramDefs.size()];
-        Map<String, JsonNode> argMap = new LinkedHashMap<>();
-        if (argsNode != null && argsNode.isObject()) {
-            argsNode.fields().forEachRemaining(entry -> argMap.put(entry.getKey(), entry.getValue()));
-        }
 
         for (int i = 0; i < paramDefs.size(); i++) {
             ParameterDefinition paramDef = paramDefs.get(i);
-            JsonNode valueNode = argMap.get(paramDef.name());
+            JsonNode valueNode = argsNode.get(paramDef.name());
             if (paramDef.required() && (valueNode == null || valueNode.isNull())) {
                 throw new IllegalArgumentException("Missing required parameter: " + paramDef.name());
             }
             Class<?> paramType = methodParams[i].getType();
-            args[i] = convertValue(valueNode, paramType);
+            if ((valueNode == null || valueNode.isNull()) && paramType.isPrimitive()) {
+                throw new IllegalArgumentException("Parameter " + paramDef.name()
+                        + " cannot be null for primitive type " + paramType.getSimpleName());
+            }
+            try {
+                args[i] = convertValue(valueNode, paramType);
+            } catch (JsonProcessingException e) {
+                throw new IllegalArgumentException("Invalid parameter " + paramDef.name()
+                        + ": expected " + paramType.getSimpleName(), e);
+            }
         }
 
         return args;
@@ -172,25 +199,10 @@ public class ToolExecutor {
         return builder.toString();
     }
 
-    private Object convertValue(JsonNode valueNode, Class<?> targetType) {
+    private Object convertValue(JsonNode valueNode, Class<?> targetType) throws JsonProcessingException {
         if (valueNode == null || valueNode.isNull()) {
             return null;
         }
-        try {
-            return OBJECT_MAPPER.treeToValue(valueNode, targetType);
-        } catch (JsonProcessingException e) {
-            if (targetType == String.class) {
-                return valueNode.asText();
-            } else if (targetType == Integer.class || targetType == int.class) {
-                return valueNode.asInt();
-            } else if (targetType == Long.class || targetType == long.class) {
-                return valueNode.asLong();
-            } else if (targetType == Double.class || targetType == double.class) {
-                return valueNode.asDouble();
-            } else if (targetType == Boolean.class || targetType == boolean.class) {
-                return valueNode.asBoolean();
-            }
-            return valueNode.asText();
-        }
+        return OBJECT_MAPPER.treeToValue(valueNode, targetType);
     }
 }

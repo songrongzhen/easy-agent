@@ -120,6 +120,8 @@ public class OrderService {
 | `ToolExecutor` | 工具执行器，负责参数解析、反射调用、结果序列化 |
 | `EasyToolBeanPostProcessor` | Bean 后置处理器，自动扫描并注册 @EasyTool 方法 |
 
+工具执行入口会检查 `enabled` 并在业务方法执行前校验参数。参数必须是单个 JSON 对象（无参数工具使用 `{}`）；缺少必填参数、类型转换失败及小数转整数等情况返回失败，不会使用 `0` / `false` 等默认值继续执行。可选参数建议使用 `Integer`、`Boolean` 等包装类型，基本类型参数不能缺失或为 `null`。
+
 **SPI 接口：**
 
 - `ToolProvider`：自定义工具提供者，可编程式注册工具
@@ -363,12 +365,14 @@ easy-agent:
 
 | 配置项 | 作用 | 默认值 | 是否必须 |
 |------|------|------|------|
-| `max-tool-rounds` | 控制模型最多连续发起多少轮工具调用，避免无限循环 | `5` | 否 |
+| `max-tool-rounds` | 最多执行的工具调用轮数；达到上限后额外请求一次无工具的最终回答 | `5` | 否 |
 | `retry-enabled` | 控制工具执行失败后是否自动重试 | `true` | 否 |
 | `retry-attempts` | 单个工具调用失败后的重试次数 | `1` | 否 |
 | `retry-backoff-millis` | 每次重试前的等待时间 | `200` | 否 |
 | `fallback-to-chat-enabled` | 工具调用失败后是否降级为普通对话 | `true` | 否 |
 | `repeated-tool-call-threshold` | 同一工具连续重复调用多少次后触发循环保护 | `3` | 否 |
+
+达到工具调用轮次上限后，服务会保留完整对话及已执行工具的结果，再调用普通聊天接口生成最终回答，因此可能额外产生一次模型请求。重复调用保护触发时，会为被跳过的调用回填停止原因，再生成最终回答。最终回答请求失败时返回明确的失败信息，不返回未完成的工具调用。直接传入 `chatWithRegisteredTools(messages, maxToolRounds)` 的轮次必须大于 0。
 
 **完整配置示例：**
 

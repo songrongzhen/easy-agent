@@ -1,5 +1,7 @@
 package io.github.songrongzhen.easyagent.llm.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.songrongzhen.easyagent.core.executor.ToolExecutor;
 import io.github.songrongzhen.easyagent.core.model.ToolInvocation;
 import io.github.songrongzhen.easyagent.core.model.ToolResult;
@@ -19,6 +21,7 @@ public class AgentLlmService {
 
     private static final Logger log = LoggerFactory.getLogger(AgentLlmService.class);
     private static final int DEFAULT_MAX_TOOL_ROUNDS = 5;
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final LlmService llmService;
     private final ToolRegistry toolRegistry;
@@ -42,9 +45,12 @@ public class AgentLlmService {
     }
 
     public ChatResponse chatWithRegisteredTools(List<ChatMessage> messages, int maxToolRounds) {
+        if (maxToolRounds <= 0) {
+            throw new IllegalArgumentException("maxToolRounds must be greater than 0");
+        }
         List<ToolDescriptor> tools = ToolDescriptorConverter.fromToolDefinitions(toolRegistry.getEnabledTools());
         if (tools.isEmpty()) {
-            return llmService.chat(messages);
+            return llmService.chat(messages == null ? List.of() : messages);
         }
 
         List<ChatMessage> conversation = new ArrayList<>(messages == null ? List.of() : messages);
@@ -52,34 +58,53 @@ public class AgentLlmService {
         ToolCallLoopGuard loopGuard = new ToolCallLoopGuard(resolveRepeatedToolCallThreshold());
 
         for (int round = 0; round < maxToolRounds; round++) {
-            response = invokeChatWithTools(conversation, tools, messages);
+            response = invokeChatWithTools(conversation, tools);
+            if (response == null) return ChatResponse.of("LLM returned no response", "none");
             if (!response.hasToolCalls()) {
                 return response;
             }
 
             conversation.add(ChatMessage.assistantWithToolCalls(response.content(), response.toolCalls()));
+            boolean stopped = false;
             for (ToolCall toolCall : response.toolCalls()) {
-                if (loopGuard.isRepeated(toolCall)) {
-                    log.warn("Repeated tool call detected, stop looping: {}", toolCall.name());
-                    return response;
+                if (toolCall == null || toolCall.id() == null || toolCall.id().isBlank()) {
+                    return ChatResponse.of("LLM returned an invalid tool call without an id", "none");
                 }
-                conversation.add(ChatMessage.toolResult(toolCall.id(), executeToolCall(toolCall)));
+                if (!stopped && loopGuard.isRepeated(toolCall)) {
+                    log.warn("Repeated tool call detected, stop looping: {}", toolCall.name());
+                    stopped = true;
+                }
+                // Complete every pending call, including skipped calls, before asking for a final answer.
+                String result = stopped
+                        ? buildErrorPayload("TOOL_CALL_LOOP_STOPPED", "Tool execution stopped due to repeated calls")
+                        : executeToolCall(toolCall);
+                conversation.add(ChatMessage.toolResult(toolCall.id(), result));
             }
+            if (stopped) return finishConversation(conversation, "Repeated tool calls were stopped");
         }
 
-        return response != null ? response : fallbackToChat(messages);
+        return finishConversation(conversation, "Maximum tool execution rounds reached");
     }
 
-    private ChatResponse invokeChatWithTools(List<ChatMessage> conversation,
-                                             List<ToolDescriptor> tools,
-                                             List<ChatMessage> originalMessages) {
+    private ChatResponse finishConversation(List<ChatMessage> conversation, String reason) {
+        List<ChatMessage> finalMessages = new ArrayList<>(conversation);
+        finalMessages.add(ChatMessage.system(reason
+                + ". Do not request more tools. Answer using the available tool results and explain any incomplete work."));
+        ChatResponse finalResponse = fallbackToChat(finalMessages);
+        if (finalResponse == null || finalResponse.hasToolCalls()) {
+            return ChatResponse.of("Unable to produce a final answer: " + reason, "none");
+        }
+        return finalResponse;
+    }
+
+    private ChatResponse invokeChatWithTools(List<ChatMessage> conversation, List<ToolDescriptor> tools) {
         try {
             return retryEnabled()
                     ? invokeWithRetry(() -> llmService.chatWithTools(conversation, tools))
                     : llmService.chatWithTools(conversation, tools);
         } catch (RuntimeException e) {
             log.warn("chatWithTools failed, fallback={}", fallbackEnabled(), e);
-            return fallbackEnabled() ? fallbackToChat(originalMessages) : ChatResponse.of("LLM tool call failed: " + e.getMessage(), "none");
+            return fallbackEnabled() ? fallbackToChat(conversation) : ChatResponse.of("LLM tool call failed: " + e.getMessage(), "none");
         }
     }
 
@@ -88,8 +113,13 @@ public class AgentLlmService {
             return buildErrorPayload("TOOL_NAME_EMPTY", "Tool name is required");
         }
 
-        if (toolRegistry.getTool(toolCall.name()) == null) {
+        var toolDefinition = toolRegistry.getTool(toolCall.name());
+        if (toolDefinition == null) {
             return buildErrorPayload("TOOL_NOT_FOUND", "Tool not found: " + toolCall.name());
+        }
+
+        if (!toolDefinition.enabled()) {
+            return buildErrorPayload("TOOL_DISABLED", "Tool is disabled: " + toolCall.name());
         }
 
         String arguments = toolCall.arguments();
@@ -154,30 +184,22 @@ public class AgentLlmService {
         if (result == null) {
             return buildErrorPayload("TOOL_EXECUTION_FAILED", "Tool returned empty result");
         }
-        StringBuilder builder = new StringBuilder();
-        builder.append("{");
-        builder.append("\"toolName\":\"").append(escape(result.toolName())).append("\",");
-        builder.append("\"success\":").append(result.success()).append(",");
-        builder.append("\"result\":");
-        if (result.result() == null) {
-            builder.append("null");
-        } else {
-            builder.append("\"").append(escape(result.result())).append("\"");
-        }
-        builder.append(",");
-        builder.append("\"error\":");
-        if (result.error() == null) {
-            builder.append("null");
-        } else {
-            builder.append("\"").append(escape(result.error())).append("\"");
-        }
-        builder.append("}");
-        return builder.toString();
+        return serializePayload(result);
     }
 
     private String buildErrorPayload(String code, String message) {
-        return "{\"success\":false,\"errorCode\":\"" + escape(code) + "\",\"message\":\"" + escape(message) + "\"}";
+        return serializePayload(new ToolErrorPayload(false, code, message));
     }
+
+    private String serializePayload(Object payload) {
+        try {
+            return OBJECT_MAPPER.writeValueAsString(payload);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Failed to serialize tool result", e);
+        }
+    }
+
+    private record ToolErrorPayload(boolean success, String errorCode, String message) {}
 
     private boolean isRetryableFailure(ToolResult result) {
         if (result == null || result.success()) {
@@ -195,13 +217,6 @@ public class AgentLlmService {
                 || lower.contains("503")
                 || lower.contains("502")
                 || lower.contains("500");
-    }
-
-    private String escape(String value) {
-        if (value == null) {
-            return "";
-        }
-        return value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
     private boolean retryEnabled() {
