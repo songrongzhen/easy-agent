@@ -262,7 +262,9 @@ public class KnowledgeService {
 
 实现了轻量 MCP（Model Context Protocol）HTTP 服务端，未配置 LLM 时也可仅提供 MCP 能力，让 Claude Code 等 MCP 客户端直接调用 `@EasyTool` 注册的工具。
 
-当前 MCP 模块是基础工具型服务端，默认协议版本为 `2025-11-25`，并兼容 `2024-11-05`。`initialize` 时客户端未传 `protocolVersion` 会默认使用 `2025-11-25`；传入 `2025-11-25` 或 `2024-11-05` 会按客户端版本返回；传入其他版本会返回 JSON-RPC `INVALID_PARAMS`。
+当前 MCP 模块是无会话的基础工具型 HTTP 服务端，返回 JSON，不提供 SSE 推送，也不创建 `MCP-Session-Id`。默认协议版本为 `2025-11-25`，可协商 `2025-06-18`、`2025-03-26` 和原有的 `2024-11-05` 消息版本；不提供旧版 HTTP+SSE 传输。
+
+`initialize` 必须提供 `protocolVersion`、`capabilities` 和包含 `name`、`version` 的 `clientInfo`。支持的版本原样返回，不支持的非空版本协商为 `2025-11-25`，由客户端决定是否继续；缺少字段或字段类型错误返回 `INVALID_PARAMS`。初始化成功后，客户端发送 `notifications/initialized`，再列出或调用工具。服务端不保存客户端初始化状态，客户端负责遵守调用顺序。
 
 MCP 的工具暴露支持可选治理：默认仍然暴露所有已启用工具；如果开启 `easy-agent.mcp.tool-exposure.enabled`，则可以按工具名、来源、分类做允许或屏蔽控制。MCP 错误也已统一收口到错误枚举与错误工厂，便于客户端稳定识别错误类型。
 
@@ -279,8 +281,23 @@ MCP 的工具暴露支持可选治理：默认仍然暴露所有已启用工具�
 
 **传输方式：**
 
-- **HTTP POST**：基于 JSON-RPC 2.0 的 POST 请求
-- **HTTP GET**：支持 URL 参数方式调用（用于调试）
+- **HTTP POST `/mcp`**：单条 JSON-RPC 2.0 消息，`Content-Type: application/json`，`Accept: application/json, text/event-stream`。请求必须包含字符串或整数 `id`，正常返回 HTTP 200 和 JSON 结果或 JSON-RPC 错误。
+- **通知**：`notifications/*` 消息必须省略 `id`，合法通知返回 HTTP 202，响应体为空。未知通知安全忽略；通知不执行工具。
+- **错误输入**：非法 JSON 返回 HTTP 400 / `PARSE_ERROR`；非法消息结构返回 HTTP 400 / `INVALID_REQUEST`；缺少可接受的响应类型返回 HTTP 406。批量数组、客户端响应及无 `id` 的工具调用不会执行工具。
+- **协议版本头**：初始化之后发送协商后的 `MCP-Protocol-Version`；不支持的版本头返回 HTTP 400。省略时按 `2025-03-26` 兼容基线处理。
+- **HTTP GET / DELETE `/mcp`**：返回 HTTP 405；原 GET URL 参数调试调用已移除，请改用 POST。
+- **Origin 校验**：即使关闭 CORS，携带 Origin 的请求仍须匹配 `easy-agent.mcp.cors.allowed-origin-patterns`；默认允许 localhost 和 127.0.0.1 的 HTTP 来源，不允许的来源返回 HTTP 403。未携带 Origin 的原生客户端可以访问。该校验不代替业务系统的身份认证。
+
+最小初始化请求：
+
+```bash
+curl -i http://localhost:8080/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"demo","version":"1.0"}}}'
+```
+
+原有仅发送 `protocolVersion` 的初始化请求需要补充字段；原有 curl POST 调试命令需要补充上述 Accept 头。
 
 
 **MCP 客户端配置示例（Claude Code）：**

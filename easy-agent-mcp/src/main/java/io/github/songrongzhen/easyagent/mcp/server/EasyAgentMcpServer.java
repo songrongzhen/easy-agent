@@ -33,14 +33,16 @@ public class EasyAgentMcpServer {
         if (request == null) {
             return McpErrorFactory.jsonRpcError(null, McpErrorCode.INVALID_REQUEST, "request body is required");
         }
-        if (request.method() == null || request.method().isBlank()) {
+        if (!McpProtocol.JSONRPC_VERSION.equals(request.jsonrpc())
+                || !(request.id() instanceof String || request.id() instanceof Integer
+                || request.id() instanceof Long || request.id() instanceof java.math.BigInteger)
+                || request.method() == null || request.method().isBlank()) {
             return McpErrorFactory.jsonRpcError(request.id(), McpErrorCode.INVALID_REQUEST, "method is required");
         }
 
         try {
             Object result = switch (request.method()) {
                 case "initialize" -> handleInitialize(request);
-                case "notifications/initialized" -> handleInitializedNotification();
                 case "tools/list" -> handleToolsList();
                 case "tools/call" -> handleToolsCall(request);
                 case "resources/list" -> handleResourcesList();
@@ -76,28 +78,19 @@ public class EasyAgentMcpServer {
     }
 
     private String resolveProtocolVersion(Map<String, Object> params) {
-        if (params == null || !params.containsKey("protocolVersion")) {
-            return McpProtocol.LATEST_PROTOCOL_VERSION;
+        if (params == null || !(params.get("capabilities") instanceof Map<?, ?>)
+                || !(params.get("clientInfo") instanceof Map<?, ?> clientInfo)
+                || !(clientInfo.get("name") instanceof String name) || name.isBlank()
+                || !(clientInfo.get("version") instanceof String version) || version.isBlank()) {
+            throw new McpRequestException(McpErrorCode.INVALID_PARAMS.getCode(), "initialize requires capabilities and clientInfo");
         }
-
-        Object protocolVersionObj = params.get("protocolVersion");
-        if (protocolVersionObj == null) {
-            return McpProtocol.LATEST_PROTOCOL_VERSION;
-        }
-        if (!(protocolVersionObj instanceof String requestedVersion) || requestedVersion.isBlank()) {
-            throw new McpRequestException(McpErrorCode.INVALID_PARAMS.getCode(), McpErrorCode.INVALID_PARAMS.getMessage());
+        if (!(params.get("protocolVersion") instanceof String requestedVersion) || requestedVersion.isBlank()) {
+            throw new McpRequestException(McpErrorCode.INVALID_PARAMS.getCode(), "protocolVersion must be a non-empty string");
         }
         if (!McpProtocol.SUPPORTED_PROTOCOL_VERSIONS.contains(requestedVersion)) {
-            throw new McpRequestException(McpErrorCode.INVALID_PARAMS.getCode(),
-                    McpErrorFactory.buildMessage(McpErrorCode.INVALID_PARAMS,
-                            "不支持的 protocolVersion: " + requestedVersion + "，当前支持: " + McpProtocol.SUPPORTED_PROTOCOL_VERSIONS));
+            return McpProtocol.LATEST_PROTOCOL_VERSION;
         }
         return requestedVersion;
-    }
-
-    private Map<String, Object> handleInitializedNotification() {
-        log.debug("MCP client initialized");
-        return Map.of();
     }
 
     private McpProtocol.ListToolsResult handleToolsList() {
@@ -113,20 +106,20 @@ public class EasyAgentMcpServer {
     private McpProtocol.CallToolResult handleToolsCall(McpProtocol.JsonRpcRequest request) {
         Map<String, Object> params = request.params();
         if (params == null) {
-            return McpErrorFactory.toolError(McpErrorCode.INVALID_PARAMS, "缺少参数");
+            throw new McpRequestException(McpErrorCode.INVALID_PARAMS.getCode(), "缺少参数");
         }
         
         Object nameObj = params.get("name");
         if (!(nameObj instanceof String toolName)) {
-            return McpErrorFactory.toolError(McpErrorCode.INVALID_PARAMS, "tool name 必须是字符串");
+            throw new McpRequestException(McpErrorCode.INVALID_PARAMS.getCode(), "tool name 必须是字符串");
         }
-        if (toolName == null || toolName.isEmpty()) {
-            return McpErrorFactory.toolError(McpErrorCode.INVALID_PARAMS, "tool name 不能为空");
+        if (toolName.isBlank()) {
+            throw new McpRequestException(McpErrorCode.INVALID_PARAMS.getCode(), "tool name 不能为空");
         }
 
         Object argumentsObj = params.get("arguments");
         if (argumentsObj != null && !(argumentsObj instanceof Map<?, ?>)) {
-            return McpErrorFactory.toolError(McpErrorCode.INVALID_PARAMS, "arguments 必须是对象");
+            throw new McpRequestException(McpErrorCode.INVALID_PARAMS.getCode(), "arguments 必须是对象");
         }
 
         @SuppressWarnings("unchecked")

@@ -12,6 +12,8 @@ public class McpProtocol {
     public static final String LATEST_PROTOCOL_VERSION = "2025-11-25";
     public static final List<String> SUPPORTED_PROTOCOL_VERSIONS = List.of(
             LATEST_PROTOCOL_VERSION,
+            "2025-06-18",
+            "2025-03-26",
             "2024-11-05"
     );
 
@@ -27,15 +29,12 @@ public class McpProtocol {
             String method,
             Map<String, Object> params
     ) {
-        public JsonRpcRequest {
-            if (jsonrpc == null) jsonrpc = JSONRPC_VERSION;
-        }
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record JsonRpcResponse(
             String jsonrpc,
-            Object id,
+            @JsonInclude(JsonInclude.Include.ALWAYS) Object id,
             Object result,
             JsonRpcError error
     ) {
