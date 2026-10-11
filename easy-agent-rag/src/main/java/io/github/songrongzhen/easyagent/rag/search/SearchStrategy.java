@@ -20,6 +20,14 @@ public interface SearchStrategy {
      */
     List<DocumentChunk> search(String query, List<DocumentChunk> documents, int topK);
 
+    /** Validate before fallback or external model calls so invalid input is not swallowed. */
+    static boolean hasSearchInput(String query, int topK) {
+        if (topK < 0) {
+            throw new IllegalArgumentException("topK must be greater than or equal to 0");
+        }
+        return topK > 0 && query != null && !query.isBlank();
+    }
+
     /**
      * 文档入库前的准备动作，例如生成文档向量。
      *

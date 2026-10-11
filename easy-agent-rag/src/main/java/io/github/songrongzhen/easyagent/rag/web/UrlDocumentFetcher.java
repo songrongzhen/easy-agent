@@ -38,16 +38,18 @@ public class UrlDocumentFetcher {
         URI currentUri = uri;
         for (int redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount++) {
             HttpResponse<InputStream> response = sendRequest(currentUri);
-            int statusCode = response.statusCode();
-            if (isRedirect(statusCode)) {
-                currentUri = resolveRedirectUri(currentUri, response);
-                continue;
+            try (InputStream body = response.body()) {
+                int statusCode = response.statusCode();
+                if (isRedirect(statusCode)) {
+                    currentUri = resolveRedirectUri(currentUri, response);
+                    continue;
+                }
+                validateStatusCode(statusCode, currentUri);
+                String contentType = response.headers().firstValue("Content-Type").orElse("");
+                validateHtmlContentType(contentType, currentUri);
+                String html = readBody(body, resolveCharset(contentType), currentUri);
+                return new FetchedHtmlDocument(currentUri.toString(), currentUri.getHost(), contentType, html);
             }
-            validateStatusCode(statusCode, currentUri);
-            String contentType = response.headers().firstValue("Content-Type").orElse("");
-            validateHtmlContentType(contentType, currentUri);
-            String html = readBody(response.body(), resolveCharset(contentType), currentUri);
-            return new FetchedHtmlDocument(currentUri.toString(), currentUri.getHost(), contentType, html);
         }
         throw new IOException("HTML knowledge URL redirected too many times: " + uri);
     }
@@ -122,11 +124,11 @@ public class UrlDocumentFetcher {
     }
 
     private String readBody(InputStream inputStream, Charset charset, URI uri) throws IOException {
-        try (InputStream body = inputStream; ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+        try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
             byte[] buffer = new byte[8192];
             int total = 0;
             int read;
-            while ((read = body.read(buffer)) != -1) {
+            while ((read = inputStream.read(buffer)) != -1) {
                 total += read;
                 if (total > MAX_CONTENT_BYTES) {
                     throw new IOException("HTML knowledge URL response is too large: " + uri);

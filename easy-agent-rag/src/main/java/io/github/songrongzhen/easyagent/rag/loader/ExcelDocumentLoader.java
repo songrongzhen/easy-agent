@@ -53,8 +53,11 @@ public class ExcelDocumentLoader implements DocumentLoader {
             for (Resource resource : allResources) {
                 String filename = resource.getFilename();
                 log.info("Loading Excel document: {}", filename);
-                try {
-                    List<DocumentChunk> chunks = load(filename, filename, resource.getInputStream());
+                try (InputStream input = resource.getInputStream()) {
+                    // Resource identity, rather than basename, prevents cross-directory collisions.
+                    String documentId = java.util.UUID.nameUUIDFromBytes(
+                            resource.getURI().toString().getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();
+                    List<DocumentChunk> chunks = load(documentId, filename, input);
                     allChunks.addAll(chunks);
                     log.info("Loaded {} chunks from {}", chunks.size(), filename);
                 } catch (Exception e) {
@@ -119,9 +122,9 @@ public class ExcelDocumentLoader implements DocumentLoader {
         List<String> headers = new ArrayList<>();
         
         if (headerRow != null) {
-            for (Cell cell : headerRow) {
-                String header = getCellValueAsString(cell);
-                headers.add(header != null ? header.trim() : "Column" + cell.getColumnIndex());
+            for (int column = 0; column < headerRow.getLastCellNum(); column++) {
+                String header = getCellValueAsString(headerRow.getCell(column));
+                headers.add(header == null || header.isBlank() ? "Column" + column : header.trim());
             }
         }
 
@@ -155,13 +158,13 @@ public class ExcelDocumentLoader implements DocumentLoader {
         
         boolean hasContent = false;
         
-        for (int i = 0; i < headers.size(); i++) {
+        for (int i = 0; i < Math.max(headers.size(), row.getLastCellNum()); i++) {
             Cell cell = row.getCell(i, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
             String value = getCellValueAsString(cell);
             
             if (value != null && !value.trim().isEmpty()) {
                 hasContent = true;
-                String header = headers.get(i);
+                String header = i < headers.size() ? headers.get(i) : "Column" + i;
                 content.append(header).append("：").append(value.trim()).append("\n");
                 metadata.put("col_" + header, value.trim());
             }

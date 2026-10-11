@@ -216,6 +216,8 @@ RAG 模块支持在启动时加载 `classpath:knowledge/` 下的 PDF、Excel 文
 - `AUTO` 会按 Embedding、Cosine、TF-IDF 顺序降级检索
 - Embedding 检索会在文档加入内存存储时生成文档向量，查询时只生成 query 向量
 - Cosine 和 TF-IDF 不依赖外部服务，适合作为本地兜底策略
+- 内置检索策略对空白查询及 `topK=0` 返回空列表，负数 `topK` 抛出 `IllegalArgumentException`
+- TF-IDF 使用平滑 IDF，单篇文档和所有文档共有的词也能获得正分数；升级后分数会变化，已有自定义 `min-score` 需重新评估
 
 **文档加载：**
 
@@ -232,6 +234,8 @@ RAG 模块支持在启动时加载 `classpath:knowledge/` 下的 PDF、Excel 文
 - 支持运行时添加在线 HTML 知识库 URL 到知识库
 - 支持按 `source` 删除文档块
 - 支持按 `documentId` 删除文档块
+- 同一 `documentId` 的运行时文档或 URL 页面解析成功后替换旧内容；新内容为空时删除旧块，解析失败时保留旧块
+- 自动扫描 PDF/Excel 时按资源 URI 生成文档 ID，避免不同目录同名文件互相覆盖；删除这些文档请使用返回块元数据中的 `documentId`
 - 支持清空索引
 - 支持重新扫描默认知识库目录并重建索引
 

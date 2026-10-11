@@ -113,8 +113,9 @@ public class RagService {
         validateDocumentInput(documentId, filename, inputStream);
         DocumentLoader loader = resolveLoader(filename);
         List<DocumentChunk> chunks = loader.load(documentId, filename, inputStream);
+        // Successful parsing replaces the old document, including an empty new version.
+        vectorStoreProvider.deleteByDocumentId(documentId);
         if (!chunks.isEmpty()) {
-            vectorStoreProvider.deleteByDocumentId(documentId);
             vectorStoreProvider.add(chunks);
             log.info("Added runtime document: documentId={}, filename={}, chunks={}", documentId, filename, chunks.size());
         }
@@ -142,8 +143,9 @@ public class RagService {
                 fetchedHtmlDocument.url()
         );
         chunks = enrichUrlMetadata(chunks, fetchedHtmlDocument);
+        // Successful parsing replaces the old document, including an empty new version.
+        vectorStoreProvider.deleteByDocumentId(documentId);
         if (!chunks.isEmpty()) {
-            vectorStoreProvider.deleteByDocumentId(documentId);
             vectorStoreProvider.add(chunks);
             log.info("Added URL HTML document: documentId={}, url={}, chunks={}", documentId, fetchedHtmlDocument.url(), chunks.size());
         }

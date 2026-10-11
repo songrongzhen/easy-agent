@@ -20,7 +20,7 @@ public class CosineSimilaritySearchStrategy implements SearchStrategy {
 
     @Override
     public List<DocumentChunk> search(String query, List<DocumentChunk> documents, int topK) {
-        if (documents == null || documents.isEmpty()) {
+        if (!SearchStrategy.hasSearchInput(query, topK) || documents == null || documents.isEmpty()) {
             return List.of();
         }
         
@@ -36,7 +36,7 @@ public class CosineSimilaritySearchStrategy implements SearchStrategy {
         }
         
         if (vocabulary.isEmpty()) {
-            return documents.stream().limit(topK).collect(Collectors.toList());
+            return List.of();
         }
         
         List<String> vocabList = new ArrayList<>(vocabulary);
@@ -54,7 +54,7 @@ public class CosineSimilaritySearchStrategy implements SearchStrategy {
         List<ScoredChunk> scored = new ArrayList<>();
         for (int i = 0; i < documents.size(); i++) {
             double similarity = cosineSimilarity(queryVector, docVectors.get(i));
-            if (similarity >= minSimilarity) {
+            if (similarity > 0 && similarity >= minSimilarity) {
                 scored.add(new ScoredChunk(documents.get(i), similarity));
             }
         }

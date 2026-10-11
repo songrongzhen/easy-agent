@@ -34,6 +34,9 @@ public class InMemoryVectorStoreProvider implements VectorStoreProvider {
 
     @Override
     public List<DocumentChunk> search(String query, int topK) {
+        if (!SearchStrategy.hasSearchInput(query, topK)) {
+            return List.of();
+        }
         List<DocumentChunk> allDocs = new ArrayList<>(store.values());
         if (allDocs.isEmpty()) {
             return List.of();

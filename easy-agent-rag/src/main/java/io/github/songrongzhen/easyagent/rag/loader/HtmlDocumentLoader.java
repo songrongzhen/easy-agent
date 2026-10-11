@@ -120,7 +120,7 @@ public class HtmlDocumentLoader implements DocumentLoader {
         int start = 0;
         int chunkIndex = 0;
         while (start < text.length()) {
-            int end = Math.min(start + chunkSize, text.length());
+            int end = (int) Math.min((long) start + chunkSize, text.length());
             String chunkContent = text.substring(start, end).trim();
             if (!chunkContent.isEmpty()) {
                 Map<String, Object> metadata = new HashMap<>();
@@ -140,6 +140,7 @@ public class HtmlDocumentLoader implements DocumentLoader {
                 ));
                 chunkIndex++;
             }
+            if (end == text.length()) break;
             start += chunkSize - chunkOverlap;
         }
         return chunks;

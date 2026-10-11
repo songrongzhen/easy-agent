@@ -50,7 +50,7 @@ public class EmbeddingSearchStrategy implements SearchStrategy {
 
     @Override
     public List<DocumentChunk> search(String query, List<DocumentChunk> documents, int topK) {
-        if (documents == null || documents.isEmpty()) {
+        if (!SearchStrategy.hasSearchInput(query, topK) || documents == null || documents.isEmpty()) {
             return List.of();
         }
         

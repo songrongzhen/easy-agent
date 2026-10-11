@@ -59,8 +59,11 @@ public class PdfDocumentLoader implements DocumentLoader {
             for (Resource resource : resources) {
                 String filename = resource.getFilename();
                 log.info("Loading PDF document: {}", filename);
-                try {
-                    List<DocumentChunk> chunks = load(filename, filename, resource.getInputStream());
+                try (InputStream input = resource.getInputStream()) {
+                    // Resource identity, rather than basename, prevents cross-directory collisions.
+                    String documentId = java.util.UUID.nameUUIDFromBytes(
+                            resource.getURI().toString().getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();
+                    List<DocumentChunk> chunks = load(documentId, filename, input);
                     allChunks.addAll(chunks);
                     log.info("Loaded {} chunks from {}", chunks.size(), filename);
                 } catch (Exception e) {
@@ -108,7 +111,7 @@ public class PdfDocumentLoader implements DocumentLoader {
         int start = 0;
         int chunkIndex = 0;
         while (start < text.length()) {
-            int end = Math.min(start + chunkSize, text.length());
+            int end = (int) Math.min((long) start + chunkSize, text.length());
             String chunkContent = text.substring(start, end).trim();
             if (!chunkContent.isEmpty()) {
                 Map<String, Object> metadata = new HashMap<>();
@@ -124,6 +127,7 @@ public class PdfDocumentLoader implements DocumentLoader {
                 ));
                 chunkIndex++;
             }
+            if (end == text.length()) break;
             start += chunkSize - chunkOverlap;
         }
         return chunks;

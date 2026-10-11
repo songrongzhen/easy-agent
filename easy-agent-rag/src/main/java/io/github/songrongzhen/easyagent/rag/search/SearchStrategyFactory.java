@@ -138,6 +138,7 @@ public class SearchStrategyFactory {
                 List<io.github.songrongzhen.easyagent.rag.store.DocumentChunk> documents, 
                 int topK) {
             
+            if (!SearchStrategy.hasSearchInput(query, topK)) return List.of();
             for (SearchStrategy strategy : strategies) {
                 try {
                     var results = strategy.search(query, documents, topK);
@@ -165,6 +166,7 @@ public class SearchStrategyFactory {
                 String query,
                 List<io.github.songrongzhen.easyagent.rag.store.DocumentChunk> documents,
                 int topK) {
+            SearchStrategy.hasSearchInput(query, topK);
             return List.of();
         }
 

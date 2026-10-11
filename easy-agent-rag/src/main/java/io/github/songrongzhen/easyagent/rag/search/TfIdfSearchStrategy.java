@@ -29,25 +29,27 @@ public class TfIdfSearchStrategy implements SearchStrategy {
 
     @Override
     public List<DocumentChunk> search(String query, List<DocumentChunk> documents, int topK) {
-        if (documents == null || documents.isEmpty()) {
+        if (!SearchStrategy.hasSearchInput(query, topK) || documents == null || documents.isEmpty()) {
             return List.of();
         }
         
         // 分词
         Set<String> queryWords = tokenize(query);
         if (queryWords.isEmpty()) {
-            return documents.stream().limit(topK).collect(Collectors.toList());
+            return List.of();
         }
         
         // 计算IDF
-        Map<String, Double> idf = calculateIDF(documents, queryWords);
+        List<Set<String>> documentWords = documents.stream().map(doc -> tokenize(doc.content())).toList();
+        Map<String, Double> idf = calculateIDF(documentWords, queryWords);
         
         // 计算每个文档的TF-IDF得分
         List<ScoredChunk> scored = new ArrayList<>();
-        for (DocumentChunk doc : documents) {
-            Set<String> docWords = tokenize(doc.content());
+        for (int index = 0; index < documents.size(); index++) {
+            DocumentChunk doc = documents.get(index);
+            Set<String> docWords = documentWords.get(index);
             double score = calculateTfIdfScore(queryWords, docWords, idf);
-            if (score >= minScore) {
+            if (score > 0 && score >= minScore) {
                 scored.add(new ScoredChunk(doc, score));
             }
         }
@@ -92,19 +94,19 @@ public class TfIdfSearchStrategy implements SearchStrategy {
     /**
      * 计算IDF（逆文档频率）
      */
-    private Map<String, Double> calculateIDF(List<DocumentChunk> documents, Set<String> queryWords) {
+    private Map<String, Double> calculateIDF(List<Set<String>> documents, Set<String> queryWords) {
         Map<String, Double> idf = new HashMap<>();
         int totalDocs = documents.size();
         
         for (String word : queryWords) {
             int docCount = 0;
-            for (DocumentChunk doc : documents) {
-                if (tokenize(doc.content()).contains(word)) {
+            for (Set<String> words : documents) {
+                if (words.contains(word)) {
                     docCount++;
                 }
             }
-            // IDF = log(总文档数 / 包含该词的文档数)
-            idf.put(word, docCount > 0 ? Math.log((double) totalDocs / docCount) : 0);
+            // Smoothed IDF stays positive even when every document contains the term.
+            idf.put(word, docCount > 0 ? Math.log1p((double) totalDocs / docCount) : 0);
         }
         
         return idf;
