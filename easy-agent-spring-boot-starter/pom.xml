@@ -7,7 +7,7 @@
     <parent>
         <groupId>io.github.songrongzhen</groupId>
         <artifactId>easy-agent</artifactId>
-        <version>0.1.8</version>
+        <version>0.2.0</version>
     </parent>
 
     <artifactId>easy-agent-spring-boot-starter</artifactId>
@@ -15,6 +15,11 @@
     <description>Spring Boot Starter: Auto-configuration for all easy-agent modules</description>
 
     <dependencies>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+            <optional>true</optional>
+        </dependency>
         <dependency>
             <groupId>io.github.songrongzhen</groupId>
             <artifactId>easy-agent-core</artifactId>

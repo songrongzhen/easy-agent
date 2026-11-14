@@ -24,6 +24,11 @@
       "name": "easy-agent.llm",
       "type": "io.github.songrongzhen.easyagent.llm.config.EasyAgentLlmProperties",
       "sourceType": "io.github.songrongzhen.easyagent.llm.config.EasyAgentLlmProperties"
+    },
+    {
+      "name": "easy-agent.execution",
+      "type": "io.github.songrongzhen.easyagent.autoconfigure.EasyAgentExecutionProperties",
+      "sourceType": "io.github.songrongzhen.easyagent.autoconfigure.EasyAgentExecutionProperties"
     }
   ],
   "properties": [
@@ -155,7 +160,7 @@
     {
       "name": "easy-agent.mcp.server-version",
       "type": "java.lang.String",
-      "defaultValue": "0.1.8",
+      "defaultValue": "0.2.0",
       "description": "MCP server version returned during initialize"
     },
     {
@@ -365,19 +370,34 @@
       "name": "easy-agent.llm.tool-execution.retry-enabled",
       "type": "java.lang.Boolean",
       "defaultValue": true,
-      "description": "Whether to retry failed tool execution"
+      "description": "Whether to retry failed tool execution",
+      "deprecation": {
+        "level": "warning",
+        "reason": "Explicit AGENT-only compatibility fallback; migrate to common execution options and declare a safe effect.",
+        "replacement": "easy-agent.execution.tools"
+      }
     },
     {
       "name": "easy-agent.llm.tool-execution.retry-attempts",
       "type": "java.lang.Integer",
       "defaultValue": 1,
-      "description": "Retry attempts for a failed tool execution"
+      "description": "Total tool execution attempts including the first, not additional retries; explicit AGENT-only legacy fallback.",
+      "deprecation": {
+        "level": "warning",
+        "reason": "Explicit AGENT-only compatibility fallback; migrate to common execution options and declare a safe effect.",
+        "replacement": "easy-agent.execution.tools"
+      }
     },
     {
       "name": "easy-agent.llm.tool-execution.retry-backoff-millis",
       "type": "java.lang.Long",
       "defaultValue": 200,
-      "description": "Backoff in milliseconds before each retry"
+      "description": "Backoff in milliseconds before each retry",
+      "deprecation": {
+        "level": "warning",
+        "reason": "Explicit AGENT-only compatibility fallback; migrate to common execution options and declare a safe effect.",
+        "replacement": "easy-agent.execution.tools"
+      }
     },
     {
       "name": "easy-agent.llm.tool-execution.fallback-to-chat-enabled",
@@ -390,6 +410,53 @@
       "type": "java.lang.Integer",
       "defaultValue": 3,
       "description": "Threshold for repeated calls to the same tool before loop protection triggers"
+    },
+    {
+      "name": "easy-agent.execution.authorization.required",
+      "type": "java.lang.Boolean",
+      "description": "Require at least one host ToolAuthorizationPolicy bean.",
+      "defaultValue": false
+    },
+    {
+      "name": "easy-agent.execution.rate-limit.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Execute host rate limiters; enabled without an implementation fails startup.",
+      "defaultValue": false
+    },
+    {
+      "name": "easy-agent.execution.metrics.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Enable Micrometer tool metrics when a MeterRegistry is available.",
+      "defaultValue": false
+    },
+    {
+      "name": "easy-agent.execution.retry.default-max-attempts",
+      "type": "java.lang.Integer",
+      "description": "Total business attempts including the first. Multiple attempts require a safe per-tool effect.",
+      "defaultValue": 1
+    },
+    {
+      "name": "easy-agent.execution.retry.default-backoff-millis",
+      "type": "java.lang.Long",
+      "description": "Backoff only before an actual subsequent attempt.",
+      "defaultValue": 0
+    },
+    {
+      "name": "easy-agent.execution.tools",
+      "type": "java.util.Map<java.lang.String,io.github.songrongzhen.easyagent.autoconfigure.EasyAgentExecutionProperties$ToolOptions>",
+      "description": "Per-tool effect, max-attempts and backoff-millis overrides. Effect defaults to UNKNOWN."
+    },
+    {
+      "name": "easy-agent.llm.request-retry.max-attempts",
+      "type": "java.lang.Integer",
+      "defaultValue": 1,
+      "description": "Model request retry only; does not replay tool business execution."
+    },
+    {
+      "name": "easy-agent.llm.request-retry.backoff-millis",
+      "type": "java.lang.Long",
+      "defaultValue": 0,
+      "description": "Model request retry only; does not replay tool business execution."
     }
   ]
 }
