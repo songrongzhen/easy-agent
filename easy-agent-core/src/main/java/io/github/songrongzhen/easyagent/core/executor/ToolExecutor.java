@@ -111,7 +111,7 @@ public class ToolExecutor {
      * 创建 ToolExecutor，保存调用所需的显式依赖。
      *
      * @param registry 工具注册表
-     * @param context  可信调用上下文
+     * @param context  宿主 Spring 应用容器，用于查找工具 Bean
      */
     public ToolExecutor(ToolRegistry registry, ApplicationContext context) {
         this(registry, context, List.of());
@@ -121,7 +121,7 @@ public class ToolExecutor {
      * 创建 ToolExecutor，保存调用所需的显式依赖。
      *
      * @param registry  工具注册表
-     * @param context   可信调用上下文
+     * @param context   宿主 Spring 应用容器，用于查找工具 Bean
      * @param listeners 逻辑调用监听器
      */
     public ToolExecutor(ToolRegistry registry, ApplicationContext context, List<ToolExecutionListener> listeners) {
@@ -133,7 +133,7 @@ public class ToolExecutor {
      * 创建 ToolExecutor，保存调用所需的显式依赖。
      *
      * @param registry  工具注册表
-     * @param context   可信调用上下文
+     * @param context   宿主 Spring 应用容器，用于查找工具 Bean
      * @param listeners 逻辑调用监听器
      * @param mapper    工具专用 ObjectMapper
      */
@@ -147,7 +147,7 @@ public class ToolExecutor {
      * 创建 ToolExecutor，保存调用所需的显式依赖。
      *
      * @param registry     工具注册表
-     * @param context      可信调用上下文
+     * @param context      宿主 Spring 应用容器，用于查找工具 Bean
      * @param mapper       工具专用 ObjectMapper
      * @param listeners    逻辑调用监听器
      * @param policies     按顺序执行的宿主授权策略
@@ -194,10 +194,10 @@ public class ToolExecutor {
     }
 
     /**
-     * 通过公共契约执行工具，旧入口按匿名 JAVA 上下文委托。
+     * 使用宿主提供的工具调用上下文执行工具，供授权、限流及观测扩展使用。
      *
      * @param invocation 原始工具调用
-     * @param context    可信调用上下文
+     * @param context    工具调用上下文，其中的身份及租户信息应由宿主验证后提供
      * @return 成功结果或可对外展示的结构化工具错误
      */
     public ToolResult execute(ToolInvocation invocation, ToolCallContext context) {

@@ -60,7 +60,7 @@ public class EasyAgentMcpAutoConfiguration {
      *
      * @param mcpServer  MCP 请求分发器
      * @param properties 组件配置
-     * @param resolver   注册方法解析器
+     * @param resolver   MCP 工具调用上下文解析器，由宿主提供已验证的身份信息
      * @return 配置或装配得到的 McpController 实例
      */
     @Bean

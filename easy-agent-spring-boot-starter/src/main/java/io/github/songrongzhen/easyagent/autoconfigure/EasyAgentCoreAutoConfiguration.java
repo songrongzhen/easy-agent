@@ -76,7 +76,7 @@ public class EasyAgentCoreAutoConfiguration {
      * 装配当前工具能力需要的依赖或扩展实现。
      *
      * @param resolver 注册方法解析器
-     * @param context  可信调用上下文
+     * @param context  宿主 Spring 应用容器，用于查找工具 Bean
      * @return 配置或装配得到的 ToolRegistry 实例
      */
     @Role(BeanDefinition.ROLE_INFRASTRUCTURE)
@@ -125,7 +125,7 @@ public class EasyAgentCoreAutoConfiguration {
      * 装配当前工具能力需要的依赖或扩展实现。
      *
      * @param registry     工具注册表
-     * @param context      可信调用上下文
+     * @param context      宿主 Spring 应用容器，用于查找工具 Bean
      * @param mapper       工具专用 ObjectMapper
      * @param listeners    逻辑调用监听器
      * @param policies     按顺序执行的宿主授权策略
@@ -153,7 +153,7 @@ public class EasyAgentCoreAutoConfiguration {
      * 装配注解扫描器，延后绑定最终 Spring 代理。
      *
      * @param registry 工具注册表
-     * @param context  可信调用上下文
+     * @param context  宿主 Spring 应用容器，用于查找工具 Bean
      * @return 配置或装配得到的 EasyToolBeanPostProcessor 实例
      */
     @Role(BeanDefinition.ROLE_INFRASTRUCTURE)

@@ -28,7 +28,7 @@ public class ToolRegistry implements ApplicationContextAware {
     private ToolMethodResolver resolver;
 
     /**
-     * 可信调用上下文。
+     * 宿主 Spring 应用容器，用于查找工具 Bean。
      */
     private ApplicationContext context;
 
@@ -42,7 +42,7 @@ public class ToolRegistry implements ApplicationContextAware {
      * 创建 ToolRegistry，保存调用所需的显式依赖。
      *
      * @param resolver 注册方法解析器
-     * @param context  可信调用上下文
+     * @param context  宿主 Spring 应用容器，用于查找工具 Bean
      */
     public ToolRegistry(ToolMethodResolver resolver, ApplicationContext context) {
         configure(resolver, context);
@@ -52,7 +52,7 @@ public class ToolRegistry implements ApplicationContextAware {
      * 初始化共用方法解析器及宿主容器，保持 Schema 与绑定使用相同 mapper。
      *
      * @param resolver 注册方法解析器
-     * @param context  可信调用上下文
+     * @param context  宿主 Spring 应用容器，用于查找工具 Bean
      */
     public synchronized void configure(ToolMethodResolver resolver, ApplicationContext context) {
         if (this.resolver == null) {
